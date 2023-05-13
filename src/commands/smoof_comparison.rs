@@ -1,7 +1,7 @@
 use miette::Result;
 
 use crate::core::names::ALL_BBOB_FUNCTION_NAMES;
-use crate::core::BBOBSuite;
+use crate::core::suite::BBOBSuite;
 
 /// This command is named `run-R-smoof-comparison` and is intended to be paired with
 /// the `smoof_comparison.R` R script - if they match, the 1-24 functions are the same
