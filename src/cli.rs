@@ -16,12 +16,12 @@ struct CLIArgs {
 
 #[derive(Subcommand, Eq, PartialEq)]
 enum CLICommands {
-    #[command(
-        name = "run-R-smoof-comparison",
-        about = "Run the function for comparing R's smoof library and our embedded BBOB \
-        library's functions. Run \"smoof_comparison.R\" in R to get the other half of this comparison."
-    )]
-    RunSmoofComparison,
+    // Example:
+    // #[command(
+    //     name = "run-foo",
+    //     about = "Your description here."
+    // )]
+    // RunFoo,
 }
 
 fn main() -> Result<()> {
@@ -30,13 +30,11 @@ fn main() -> Result<()> {
         .into_diagnostic()
         .wrap_err_with(|| miette!("Could not initialize logger."))?;
 
-    let args = CLIArgs::parse();
+    // let args = CLIArgs::parse();
 
-    if args.command == CLICommands::RunSmoofComparison {
-        cmd_smoof_comparison()?;
-    } else {
-        error!("Invalid command.");
-    }
+    todo!(
+        "Add two commands, each running one of the two optimization algorithms (see CLICommands)."
+    );
 
-    Ok(())
+    // Ok(())
 }

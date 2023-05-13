@@ -11,3 +11,14 @@ coco-rs = { path = "./coco/code-experiments/build/rust" }
 log = "0.4.17"
 env_logger = "0.10.0"
 miette = { version = "5.7.0", features = ["fancy"] }
+which = "4.4.0"
+dunce = "1.0.4"
+regex = "1.8.1"
+
+[[bin]]
+name = "optimization_cli"
+path = "./src/cli.rs"
+
+[[bin]]
+name = "validate_functions"
+path = "./src/validate_functions.rs"
