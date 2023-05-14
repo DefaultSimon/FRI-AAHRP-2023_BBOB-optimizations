@@ -3,10 +3,7 @@ mod core;
 
 use clap::{Parser, Subcommand};
 use coco_rs::LogLevel;
-use log::error;
 use miette::{miette, Context, IntoDiagnostic, Result};
-
-use crate::commands::cmd_smoof_comparison;
 
 #[derive(Parser, Eq, PartialEq)]
 struct CLIArgs {
