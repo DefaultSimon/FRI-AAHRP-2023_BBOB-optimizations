@@ -14,6 +14,7 @@ miette = { version = "5.7.0", features = ["fancy"] }
 which = "4.4.0"
 dunce = "1.0.4"
 regex = "1.8.1"
+rand = "0.8.5"
 
 [[bin]]
 name = "optimization_cli"
