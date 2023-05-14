@@ -1,10 +1,11 @@
+use std::collections::HashMap;
 use std::env;
 use std::env::current_dir;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::from_utf8;
 
-use aahrp_2023_bbob_optimizations::core::names::ALL_BBOB_FUNCTION_NAMES;
+use aahrp_2023_bbob_optimizations::core::names::BBOBFunctionName;
 use aahrp_2023_bbob_optimizations::core::suite::BBOBSuite;
 use miette::{miette, Context, IntoDiagnostic, Result};
 use regex::Regex;
@@ -15,17 +16,76 @@ fn f64_approximate_eq(first: f64, second: f64, max_distance: f64) -> bool {
     (first - second).abs() < max_distance
 }
 
-static DEFAULT_F64_EQ_DISTANCE: f64 = 0.00001;
+static DEFAULT_F64_EQ_DISTANCE: f64 = 0.0001;
 
-
-pub struct FunctionResults {
-    values_per_function: Vec<(usize, f64)>,
+pub struct Sample {
+    function_index: usize,
+    function_parameters: Vec<f64>,
+    function_value: f64,
 }
 
-impl FunctionResults {
-    pub fn from_index_value_pairs(pairs: Vec<(usize, f64)>) -> Self {
+impl Sample {
+    pub fn new(index: usize, parameters: Vec<f64>, value: f64) -> Self {
         Self {
-            values_per_function: pairs,
+            function_index: index,
+            function_parameters: parameters,
+            function_value: value,
+        }
+    }
+}
+
+impl PartialEq for Sample {
+    fn eq(&self, other: &Self) -> bool {
+        if self.function_index != other.function_index {
+            return false;
+        }
+
+        for (self_parameter, other_parameter) in self
+            .function_parameters
+            .iter()
+            .zip(other.function_parameters.iter())
+        {
+            if !f64_approximate_eq(
+                *self_parameter,
+                *other_parameter,
+                DEFAULT_F64_EQ_DISTANCE,
+            ) {
+                return false;
+            }
+        }
+
+        f64_approximate_eq(
+            self.function_value,
+            other.function_value,
+            DEFAULT_F64_EQ_DISTANCE,
+        )
+    }
+}
+
+impl Eq for Sample {}
+
+
+pub struct FunctionSamples {
+    samples_by_function_index: HashMap<usize, Vec<Sample>>,
+}
+
+impl FunctionSamples {
+    pub fn from_index_parameter_value_triplets(
+        triplets: Vec<(usize, Vec<f64>, f64)>,
+    ) -> Self {
+        let mut samples_by_function_index: HashMap<usize, Vec<Sample>> =
+            HashMap::new();
+
+        for (index, parameter, value) in triplets {
+            let sample = Sample::new(index, parameter, value);
+
+            let samples_per_index =
+                samples_by_function_index.entry(index).or_default();
+            samples_per_index.push(sample);
+        }
+
+        Self {
+            samples_by_function_index,
         }
     }
 }
@@ -56,7 +116,7 @@ fn find_rscript_binary() -> Result<PathBuf> {
     }
 }
 
-fn run_r_script() -> Result<FunctionResults> {
+fn run_r_script() -> Result<FunctionSamples> {
     // Find R installation.
     let rscript_binary = find_rscript_binary()?;
     println!("Using Rscript binary at {:?}", rscript_binary);
@@ -75,13 +135,12 @@ fn run_r_script() -> Result<FunctionResults> {
     // Run `Rscript smoof_comparison.R` to get R's `smoof` library output.
     let r_output = Command::new(rscript_binary)
         .arg(smoof_comparison_script.to_string_lossy().to_string())
-        .current_dir(current_dir().into_diagnostic()?)
         .output()
         .into_diagnostic()?;
 
     if !r_output.status.success() {
         return Err(miette!(
-            "Rscript call failed with status code {}. Stderr: {}",
+            "Rscript call failed with status code {}. Stderr:\n{}",
             r_output.status.code().unwrap_or(-1),
             from_utf8(&r_output.stderr).into_diagnostic()?
         ));
@@ -91,126 +150,135 @@ fn run_r_script() -> Result<FunctionResults> {
 
     // Parse stdout output of the R script.
     let extraction_regex = Regex::new(
-        r#"\[1\] "Function (?P<index>\d+): (?P<value>-?\d+(\.\d+)?)""#,
+        r#"bbob_function_index=(?P<index>\d+);parameters=\[(?P<parameters>(-?\d+(?:\.?\d+)?)(,-?\d+(?:\.?\d+)?)*)\];value=(?P<value>\d+\.?\d*)"#,
+    ).expect("Invalid static regex?!");
+
+    let mut index_parameter_value_triplets: Vec<(usize, Vec<f64>, f64)> =
+        Vec::new();
+
+    for line in rscript_stdout_output.lines() {
+        let capture_groups = match extraction_regex.captures(line) {
+            Some(captures) => captures,
+            // Skips non-matching lines
+            None => continue,
+        };
+
+        let bbob_function_index: usize = {
+            let index_group = capture_groups
+                .name("index")
+                .ok_or_else(|| miette!("Missing capture group: index!"))?;
+
+            index_group
+                .as_str()
+                .parse::<usize>()
+                .into_diagnostic()
+                .wrap_err_with(|| {
+                    miette!("Could not convert index str to usize!")
+                })?
+        };
+
+        let parameters: Vec<f64> = {
+            let parameters_group = capture_groups
+                .name("parameters")
+                .ok_or_else(|| miette!("Missing capture group: parameters!"))?;
+
+            parameters_group
+                .as_str()
+                .split(',')
+                .map(|parameter_str| {
+                    parameter_str
+                        .parse::<f64>()
+                        .into_diagnostic()
+                        .wrap_err_with(|| {
+                            miette!("Could not parse f64 in parameter list!")
+                        })
+                })
+                .collect::<Result<Vec<f64>>>()?
+        };
+
+        let value: f64 = {
+            let value_group = capture_groups
+                .name("value")
+                .ok_or_else(|| miette!("Missing capture group: value!"))?;
+
+            value_group
+                .as_str()
+                .parse::<f64>()
+                .into_diagnostic()
+                .wrap_err_with(|| {
+                    miette!("Could not convert value str to f64!")
+                })?
+        };
+
+        index_parameter_value_triplets.push((
+            bbob_function_index,
+            parameters,
+            value,
+        ));
+    }
+
+    Ok(
+        FunctionSamples::from_index_parameter_value_triplets(
+            index_parameter_value_triplets,
+        ),
     )
-    .expect("Invalid regex!?");
-
-    let function_index_and_value_pairs = rscript_stdout_output
-        .lines()
-        .filter_map(|line| {
-            let capture_groups = match extraction_regex.captures(line) {
-                Some(groups) => groups,
-                None => return None,
-            };
-
-            let function_index = match capture_groups.name("index") {
-                Some(index) => match index.as_str().parse::<usize>() {
-                    Ok(index) => index,
-                    Err(error) => {
-                        return Some(Err(error).into_diagnostic().wrap_err_with(
-                            || {
-                                miette!(
-                                    "Could not convert string to usize: {}",
-                                    index.as_str()
-                                )
-                            },
-                        ))
-                    }
-                },
-                None => {
-                    return Some(Err(miette!("No function index in output!")));
-                }
-            };
-            let function_value = match capture_groups.name("value") {
-                Some(value) => match value.as_str().parse::<f64>() {
-                    Ok(value) => value,
-                    Err(error) => {
-                        return Some(Err(error).into_diagnostic().wrap_err_with(
-                            || {
-                                miette!(
-                                    "Could not convert string to f64: {}",
-                                    value.as_str()
-                                )
-                            },
-                        ))
-                    }
-                },
-                None => {
-                    return Some(Err(miette!("No function value in output!")));
-                }
-            };
-
-            Some(Ok((function_index, function_value)))
-        })
-        .collect::<Result<Vec<(usize, f64)>>>()?;
-
-    Ok(FunctionResults::from_index_value_pairs(
-        function_index_and_value_pairs,
-    ))
 }
 
-fn run_rust_script() -> Result<FunctionResults> {
+fn compare_r_with_rust(r_samples: FunctionSamples) -> Result<()> {
     let mut suite = BBOBSuite::new()?;
 
-    let input_values = vec![4f64; 40];
+    let mut sorted_samples: Vec<(usize, Vec<Sample>)> =
+        r_samples.samples_by_function_index.into_iter().collect();
+    sorted_samples.sort_unstable_by(
+        |(function_index, _), (other_function_index, _)| {
+            function_index.cmp(other_function_index)
+        },
+    );
 
-    let function_index_and_value_pairs = ALL_BBOB_FUNCTION_NAMES
-        .into_iter()
-        .enumerate()
-        .map(|(function_index, function_name)| {
-            let mut problem = suite.problem(function_name)?;
-            let value = problem.evaluate(&input_values);
+    for (function_index, samples) in sorted_samples {
+        let mut problem = suite.problem(
+            BBOBFunctionName::from_function_index(function_index).ok_or_else(
+                || miette!("Invalid function index! Not in 1-24 range."),
+            )?,
+        )?;
 
-            Ok((function_index + 1, value))
-        })
-        .collect::<Result<Vec<(usize, f64)>>>()?;
+        for (sample_index, sample) in samples.iter().enumerate() {
+            let value = problem.evaluate(&sample.function_parameters);
 
-    Ok(FunctionResults::from_index_value_pairs(
-        function_index_and_value_pairs,
-    ))
+            if f64_approximate_eq(
+                value,
+                sample.function_value,
+                DEFAULT_F64_EQ_DISTANCE,
+            ) {
+                println!(
+                    "Function {}, sample {}: OK ({:.4} (R) == {:.4} (Rust))",
+                    function_index,
+                    sample_index + 1,
+                    sample.function_value,
+                    value,
+                );
+            } else {
+                println!(
+                    "Function {}, sample {}: FAILED ({:.4} (R) != {:.4} (Rust))",
+                    function_index,
+                    sample_index + 1,
+                    sample.function_value,
+                    value,
+                );
+
+                return Err(miette!("One of the comparisons failed!"));
+            }
+        }
+    }
+
+    println!("\nDONE! All comparisons OK.");
+
+    Ok(())
 }
 
 fn main() -> Result<()> {
     let r_function_results = run_r_script()?;
-    let rust_function_results = run_rust_script()?;
-
-    // Compare results
-    for (function_index, r_function_value) in
-        r_function_results.values_per_function
-    {
-        let rust_function_value = rust_function_results
-            .values_per_function
-            .iter()
-            .find_map(|(index, value)| {
-                if function_index.eq(index) {
-                    Some(value)
-                } else {
-                    None
-                }
-            })
-            .ok_or_else(|| {
-                miette!(
-                    "No such function index in Rust test: {}",
-                    function_index
-                )
-            })?;
-
-        if f64_approximate_eq(
-            r_function_value,
-            *rust_function_value,
-            DEFAULT_F64_EQ_DISTANCE,
-        ) {
-            println!(
-                "Function {}: OK ({:.5} (R) == {:.5} (Rust))",
-                function_index, r_function_value, rust_function_value
-            );
-        } else {
-            println!(
-                "Function {}: MISMATCH ({:.5} (R) != {:.5} (Rust))",
-                function_index, r_function_value, rust_function_value
-            )
-        }
-    }
+    compare_r_with_rust(r_function_results)?;
 
     Ok(())
 }
