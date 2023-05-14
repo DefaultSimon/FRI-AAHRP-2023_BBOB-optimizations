@@ -1,5 +1,6 @@
 mod commands;
 mod core;
+mod algorithms;
 
 use clap::{Parser, Subcommand};
 use coco_rs::LogLevel;
