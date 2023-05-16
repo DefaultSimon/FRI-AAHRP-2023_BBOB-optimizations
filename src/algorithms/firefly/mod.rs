@@ -56,7 +56,7 @@ pub struct FireflySwarm<'problem, 'options> {
 
 impl<'problem, 'options> FireflySwarm<'problem, 'options> {
     pub fn initialize(
-        problem: BBOBProblem<'problem>,
+        mut problem: BBOBProblem<'problem>,
         options: &'options FireflyOptions,
     ) -> Self {
         // Initialize the swarm.
@@ -93,12 +93,12 @@ impl<'problem, 'options> FireflySwarm<'problem, 'options> {
                         further_generation_seed,
                     ),
                     initial_position,
-                    &problem,
+                    &mut problem,
                 )
             })
             .collect();
 
-        fireflies.par_sort_unstable_by(|first, second| {
+        fireflies.sort_unstable_by(|first, second| {
             second
                 .objective_function_value
                 .total_cmp(&first.objective_function_value)
@@ -110,15 +110,6 @@ impl<'problem, 'options> FireflySwarm<'problem, 'options> {
             options,
             fireflies,
         }
-    }
-
-    #[inline]
-    fn sort_firefly_swarm_descending(&mut self) {
-        self.fireflies.par_sort_unstable_by(|first, second| {
-            second
-                .objective_function_value
-                .total_cmp(&first.objective_function_value)
-        });
     }
 
     #[inline]
@@ -137,48 +128,58 @@ impl<'problem, 'options> FireflySwarm<'problem, 'options> {
     }
 
     pub fn perform_iteration(&mut self) -> IterationResult {
+        assert_eq!(self.fireflies.len(), self.options.swarm_size);
+
         let mut result = IterationResult::new(false);
 
+        let mut new_firefly_swarm: Vec<Firefly> =
+            Vec::with_capacity(self.fireflies.len());
 
-        let new_firefly_swarm: Vec<Firefly> = self
-            .fireflies
-            .par_iter()
-            .enumerate()
-            .map(|(index, firefly)| {
-                let mut new_firefly = firefly.clone();
+        for main_firefly_index in 0..(self.fireflies.len() - 1) {
+            let (previous_and_main_firefly, better_fireflies) =
+                self.fireflies.split_at(main_firefly_index + 1);
 
-                // The swarm is always sorted (descending) at the end of the iteration.
-                // This means we can all previous fireflies are "worse", and all later fireflies are "better".
-                for brighter_firefly in self.fireflies.iter().skip(index + 1) {
-                    if brighter_firefly.objective_function_value
-                        < new_firefly.objective_function_value
-                    {
-                        new_firefly.move_towards(
-                            brighter_firefly,
-                            &self.problem,
-                            self.options,
-                        );
-                    }
+            let mut new_main_firefly =
+                previous_and_main_firefly[main_firefly_index].clone();
+
+            for brighter_firefly in better_fireflies {
+                if brighter_firefly.objective_function_value
+                    < new_main_firefly.objective_function_value
+                {
+                    new_main_firefly.move_towards(
+                        brighter_firefly,
+                        &mut self.problem,
+                        self.options,
+                    );
                 }
+            }
 
-                new_firefly
-            })
-            .collect();
+            if self.is_better_than_minimum(
+                new_main_firefly.objective_function_value,
+            ) {
+                self.update_minimum_value_unchecked(
+                    new_main_firefly.objective_function_value,
+                    new_main_firefly.position.clone(),
+                );
+                result.new_global_minimum = true;
+            }
 
-        // Resort the swarm and update self.fireflies in preparation of the next iteration.
-        self.sort_firefly_swarm_descending();
-        self.fireflies = new_firefly_swarm;
-
-        // Extract the best firefly and update the swarm minimum if lower.
-        let best_firefly = self.fireflies.get(0).expect("Swarm is empty!");
-
-        if self.is_better_than_minimum(best_firefly.objective_function_value) {
-            self.update_minimum_value_unchecked(
-                best_firefly.objective_function_value,
-                best_firefly.position.clone(),
-            );
-            result.new_global_minimum = true;
+            new_firefly_swarm.push(new_main_firefly);
         }
+
+        // We don't iterate over the last one (because it doesn't move) so we must append it manually.
+        new_firefly_swarm
+            .push(self.fireflies.last().expect("BUG: swarm is empty!").clone());
+
+        // Re-sort the swarm and update self.fireflies in preparation of the next iteration.
+        new_firefly_swarm.sort_unstable_by(|first, second| {
+            second
+                .objective_function_value
+                .total_cmp(&first.objective_function_value)
+        });
+
+        assert_eq!(new_firefly_swarm.len(), self.options.swarm_size);
+        self.fireflies = new_firefly_swarm;
 
         result
     }

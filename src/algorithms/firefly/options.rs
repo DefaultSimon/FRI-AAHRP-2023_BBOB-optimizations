@@ -1,5 +1,5 @@
 /// References:
-///  [1] https://arxiv.org/abs/1308.3898
+///  - [1: Firefly Algorithm: Recent Advances and Applications](https://arxiv.org/abs/1308.3898)
 #[derive(Debug, Clone)]
 pub struct FireflyOptions {
     /// Specified the amount of fireflies in the swarm. In FA, the swarm size is constant.
@@ -18,7 +18,6 @@ pub struct FireflyOptions {
 
     /// How many consequent iterations of non-improvement to tolerate before aborting the run
     /// (we probably got stuck in a local minimum) and returning the current minimum.
-    // TODO Implement.
     pub stuck_run_iterations_count: usize,
 
     /// Coefficient of attraction to brighter fireflies (`β_0` in the paper [1]).
@@ -50,18 +49,18 @@ impl Default for FireflyOptions {
             // MIN Values: swarm_size=150, iter=1000, light_absorption=0.001, jitter=0.001 -> 21.100002
             swarm_size: 150,
             in_bounds_random_generator_seed: [
-                199, 228, 17, 170, 248, 248, 10, 82, 75, 207, 232, 76, 38, 70,
-                37, 111,
+                133, 66, 79, 177, 132, 191, 158, 217, 101, 170, 134, 109, 79,
+                56, 2, 31,
             ],
             firefly_seed_generator_seed: [
-                160, 142, 67, 131, 64, 230, 125, 10, 243, 246, 140, 239, 12, 95,
-                173, 104,
+                58, 197, 36, 9, 167, 75, 95, 239, 78, 50, 61, 60, 217, 26, 149,
+                203,
             ],
-            maximum_iterations: 5000,
+            maximum_iterations: 2000,
             stuck_run_iterations_count: 500,
-            attractiveness_coefficient: 0.8f64,
+            attractiveness_coefficient: 1f64,
             light_absorption_coefficient: 0.025,
-            movement_jitter_coefficient: 0.1,
+            movement_jitter_coefficient: 0.01,
         }
     }
 }

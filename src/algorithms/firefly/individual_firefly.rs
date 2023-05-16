@@ -1,6 +1,8 @@
 use std::f64::consts::E;
 use std::iter::zip;
 
+use num::clamp;
+
 use crate::algorithms::firefly::options::FireflyOptions;
 use crate::algorithms::firefly::rng::UniformRNG;
 use crate::core::problem::BBOBProblem;
@@ -17,7 +19,7 @@ impl Firefly {
     pub fn new(
         uniform_zero_to_one_generator: UniformRNG,
         position: Vec<f64>,
-        problem: &BBOBProblem,
+        problem: &mut BBOBProblem,
     ) -> Self {
         assert_eq!(
             problem.input_dimensions,
@@ -36,7 +38,7 @@ impl Firefly {
     pub fn move_towards(
         &mut self,
         second_firefly: &Firefly,
-        problem: &BBOBProblem,
+        problem: &mut BBOBProblem,
         options: &FireflyOptions,
     ) {
         // Calculate attraction coefficient (essentially how much the firefly will move towards the `other_firefly`).
@@ -61,12 +63,14 @@ impl Firefly {
             second_firefly.position.iter(),
         )
         .map(|(our_value, other_firefly_value)| {
-            *our_value
+            let updated_value = *our_value
                 // Move towards the brighter firefly by the attraction coefficient.
                 + attraction_coefficient * (*other_firefly_value - *our_value)
                 // Add some random jitter, uniformly sampled and multiplied by the jitter coefficient.
                 + options.movement_jitter_coefficient
-                    * (self.uniform_zero_to_one_generator.sample() - 0.5f64)
+                    * (self.uniform_zero_to_one_generator.sample() - 0.5f64);
+
+            clamp(updated_value, -5f64, 5f64)
         })
         .collect();
 

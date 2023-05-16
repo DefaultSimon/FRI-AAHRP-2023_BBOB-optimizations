@@ -1,5 +1,3 @@
-use std::cell::UnsafeCell;
-
 use coco_rs::Problem;
 use miette::{miette, Result};
 use rand::distributions::Uniform;
@@ -26,7 +24,7 @@ impl Bounds {
 }
 
 pub struct BBOBProblem<'suite> {
-    problem: UnsafeCell<Problem<'suite>>,
+    problem: Problem<'suite>,
 
     pub name: BBOBFunctionName,
 
@@ -51,25 +49,18 @@ impl<'suite> BBOBProblem<'suite> {
         }
 
         Ok(Self {
-            problem: UnsafeCell::new(problem),
+            problem,
             name: function_name,
             input_dimensions,
             bounds,
         })
     }
 
-    pub fn evaluate(&self, input: &[f64]) -> f64 {
+    pub fn evaluate(&mut self, input: &[f64]) -> f64 {
         // Safety: problem.number_of_objectives() is guaranteed to be 1 on initialization.
         let mut values = vec![0f64; 1];
 
-        // **Safety: WE CAN NO LONGER DEPEND ON THE CORRECTNESS OF ANY INTERNAL COCO/BBOB C STRUCTURE!**
-        unsafe {
-            if let Some(problem_ref) = self.problem.get().as_mut() {
-                problem_ref.evaluate_function(input, &mut values);
-            } else {
-                panic!("BUG: Problem was an invalid reference!");
-            }
-        }
+        self.problem.evaluate_function(input, &mut values);
 
         values[0]
     }
@@ -78,6 +69,3 @@ impl<'suite> BBOBProblem<'suite> {
         self.bounds
     }
 }
-
-/// **Safety: WE CAN NO LONGER DEPEND ON THE CORRECTNESS OF ANY INTERNAL COCO/BBOB C STRUCTURE!**
-unsafe impl<'suite> Sync for BBOBProblem<'suite> {}
