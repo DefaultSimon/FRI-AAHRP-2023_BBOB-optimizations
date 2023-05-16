@@ -1,7 +1,7 @@
 use coco_rs::{Suite, SuiteName};
 use miette::{miette, Result};
 
-use crate::core::names::BBOBFunctionName;
+use crate::core::functions::BBOBFunction;
 use crate::core::problem::{BBOBProblem, Bounds};
 
 pub struct BBOBSuite {
@@ -22,13 +22,13 @@ impl BBOBSuite {
 
     pub fn problem(
         &mut self,
-        bbob_function: BBOBFunctionName,
+        bbob_function: BBOBFunction,
         bounds: Option<Bounds>,
     ) -> Result<BBOBProblem> {
         let raw_problem = self
             .suite
             .problem_by_function_dimension_instance(
-                bbob_function.function_index(),
+                bbob_function.index(),
                 40,
                 2023,
             )

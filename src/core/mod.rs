@@ -1,3 +1,3 @@
-pub mod names;
+pub mod functions;
 pub mod problem;
 pub mod suite;

@@ -2,7 +2,7 @@ use coco_rs::Problem;
 use miette::{miette, Result};
 use rand::distributions::Uniform;
 
-use crate::core::names::BBOBFunctionName;
+use crate::core::functions::BBOBFunction;
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct Bounds {
@@ -26,7 +26,7 @@ impl Bounds {
 pub struct BBOBProblem<'suite> {
     problem: Problem<'suite>,
 
-    pub name: BBOBFunctionName,
+    pub name: BBOBFunction,
 
     pub input_dimensions: usize,
 
@@ -36,7 +36,7 @@ pub struct BBOBProblem<'suite> {
 impl<'suite> BBOBProblem<'suite> {
     pub fn from_problem_and_name(
         problem: Problem<'suite>,
-        function_name: BBOBFunctionName,
+        function_name: BBOBFunction,
         bounds: Bounds,
     ) -> Result<Self> {
         let input_dimensions = problem.dimension();

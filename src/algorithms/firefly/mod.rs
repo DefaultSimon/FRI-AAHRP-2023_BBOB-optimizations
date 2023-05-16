@@ -1,10 +1,5 @@
 use individual_firefly::Firefly;
 use miette::{miette, Result};
-use options::FireflyOptions;
-use rand::distributions::Uniform;
-use rand::{Rng, SeedableRng};
-use rand_pcg::Pcg64Mcg;
-use rayon::prelude::*;
 use rng::UniformRNG;
 
 use super::common::Minimum;
@@ -12,6 +7,7 @@ use crate::core::problem::{BBOBProblem, Bounds};
 
 mod individual_firefly;
 mod options;
+pub use options::FireflyOptions;
 mod rng;
 
 // TODO Notes: we could merge the firefly algorithm with the multi-swarm optimization strategy (multiple independent swarms)
@@ -46,6 +42,8 @@ impl IterationResult {
 pub struct FireflySwarm<'problem, 'options> {
     problem: BBOBProblem<'problem>,
 
+    minus_half_to_half_uniform_generator: UniformRNG,
+
     best_solution: Option<PointAndValue>,
 
     options: &'options FireflyOptions,
@@ -55,11 +53,11 @@ pub struct FireflySwarm<'problem, 'options> {
 }
 
 impl<'problem, 'options> FireflySwarm<'problem, 'options> {
+    // Initialize the swarm with the given `FireflyOptions`.
     pub fn initialize(
         mut problem: BBOBProblem<'problem>,
         options: &'options FireflyOptions,
     ) -> Self {
-        // Initialize the swarm.
         let input_dimensions = problem.input_dimensions;
 
         // Generates uniformly-distributed f64 values in the problem's range (-5 to 5).
@@ -68,33 +66,17 @@ impl<'problem, 'options> FireflySwarm<'problem, 'options> {
             options.in_bounds_random_generator_seed,
         );
 
-        // Temporary reseeding RNG - generates u8 seeds for individual fireflies' RNGs.
-        // This way we can preserve determinism, even when multi-threading.
-        let u8_uniform_distribution = Uniform::new_inclusive(u8::MIN, u8::MAX);
-        let mut firefly_seed_generator =
-            Pcg64Mcg::from_seed(options.firefly_seed_generator_seed);
+        let minus_half_to_half_uniform_generator = UniformRNG::new(
+            Bounds::new(-0.5f64, 0.5f64),
+            options.jitter_movement_random_generator_seed,
+        );
 
         let mut fireflies: Vec<Firefly> = (0..options.swarm_size)
             .map(|_| {
-                let further_generation_seed: [u8; 16] = (0..16)
-                    .map(|_| {
-                        firefly_seed_generator.sample(u8_uniform_distribution)
-                    })
-                    .collect::<Vec<u8>>()
-                    .try_into()
-                    .expect("BUG: Iterator did not generate 16 u8?!?!");
-
                 let initial_position: Vec<f64> = in_bounds_uniform_generator
                     .sample_multiple(input_dimensions);
 
-                Firefly::new(
-                    UniformRNG::new(
-                        Bounds::new(0f64, 1f64),
-                        further_generation_seed,
-                    ),
-                    initial_position,
-                    &mut problem,
-                )
+                Firefly::new(initial_position, &mut problem)
             })
             .collect();
 
@@ -106,6 +88,7 @@ impl<'problem, 'options> FireflySwarm<'problem, 'options> {
 
         Self {
             problem,
+            minus_half_to_half_uniform_generator,
             best_solution: None,
             options,
             fireflies,
@@ -135,23 +118,28 @@ impl<'problem, 'options> FireflySwarm<'problem, 'options> {
         let mut new_firefly_swarm: Vec<Firefly> =
             Vec::with_capacity(self.fireflies.len());
 
+        // For each firefly `new_main_firefly` in the swarm, compare it with each other firefly `brighter_firefly`.
+        // If `brighter_firefly` is brighter (i.e. more fit, smaller objective value (we're minimizing)),
+        // then `new_main_firefly` moves towards `brighter_firefly` (with some light falloff and other factors).
+
+        // Optimization: as we'd sorted the array previously, we skip all the worse fireflies.
+
         for main_firefly_index in 0..self.fireflies.len() {
             let mut new_main_firefly =
                 self.fireflies[main_firefly_index].clone();
 
-            // For each firefly `F` in the swarm, compare it with each other firefly `C`.
-            // If `C` is lighter (i.e. more fit, smaller objective value (we're minimizing)),
-            // then `F` moves towards `C` (with some light falloff and other factors).
-            // Optimization: as we'd sorted the array previously, we skip all the worse fireflies.
             for brighter_firefly in
                 self.fireflies.iter().skip(main_firefly_index + 1)
             {
+                // The main firefly still moves, so all the fireflies that were brighter at the start
+                // of the iteration might not always be brighter than the moving (main) firefly.
                 if brighter_firefly.objective_function_value
                     < new_main_firefly.objective_function_value
                 {
                     new_main_firefly.move_towards(
                         brighter_firefly,
                         &mut self.problem,
+                        &mut self.minus_half_to_half_uniform_generator,
                         self.options,
                     );
                 }
@@ -173,24 +161,29 @@ impl<'problem, 'options> FireflySwarm<'problem, 'options> {
         }
 
         // Re-sort the swarm and update self.fireflies in preparation of the next iteration.
+        assert_eq!(new_firefly_swarm.len(), self.options.swarm_size);
         new_firefly_swarm.sort_unstable_by(|first, second| {
             second
                 .objective_function_value
                 .total_cmp(&first.objective_function_value)
         });
 
-        assert_eq!(new_firefly_swarm.len(), self.options.swarm_size);
         self.fireflies = new_firefly_swarm;
 
         result
     }
 }
 
+pub struct FireflyOptimizationRunResult {
+    pub iterations_performed: usize,
+    pub minimum: Minimum,
+}
+
 
 pub fn perform_firefly_swarm_optimization(
     problem: BBOBProblem,
     options: Option<FireflyOptions>,
-) -> Result<Minimum> {
+) -> Result<FireflyOptimizationRunResult> {
     let options = options.unwrap_or_default();
 
     // Initialize swarm
@@ -198,7 +191,10 @@ pub fn perform_firefly_swarm_optimization(
     let mut iterations_since_improvement: usize = 0;
 
     // Perform up to `maximum_iterations` iterations.
-    for _ in 0..options.maximum_iterations {
+    let mut iterations_performed: usize = 0;
+    for iteration_index in 0..options.maximum_iterations {
+        iterations_performed = iteration_index + 1;
+
         let result = swarm.perform_iteration();
 
         // Track iterations since improvement. If it reaches `stuck_run_iterations_count`,
@@ -218,8 +214,8 @@ pub fn perform_firefly_swarm_optimization(
         .best_solution
         .ok_or_else(|| miette!("Invalid run: no best solution at all?!"))?;
 
-    Ok(Minimum::new(
-        best_solution.value,
-        best_solution.position,
-    ))
+    Ok(FireflyOptimizationRunResult {
+        iterations_performed,
+        minimum: Minimum::new(best_solution.value, best_solution.position),
+    })
 }

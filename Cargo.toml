@@ -17,8 +17,8 @@ regex = "1.8.1"
 rand = "0.8.5"
 rand_pcg = "0.3.1"
 itertools = "0.10.5"
-rayon = "1.7.0"
 num = "0.4.0"
+pad = "0.1.6"
 
 [[bin]]
 name = "optimization_cli"

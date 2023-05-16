@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::str::from_utf8;
 
-use aahrp_2023_bbob_optimizations::core::names::BBOBFunctionName;
+use aahrp_2023_bbob_optimizations::core::functions::BBOBFunction;
 use aahrp_2023_bbob_optimizations::core::suite::BBOBSuite;
 use miette::{miette, Context, IntoDiagnostic, Result};
 use regex::Regex;
@@ -237,7 +237,7 @@ fn compare_r_with_rust(r_samples: FunctionSamples) -> Result<()> {
 
     for (function_index, samples) in sorted_samples {
         let mut problem = suite.problem(
-            BBOBFunctionName::from_function_index(function_index).ok_or_else(
+            BBOBFunction::from_function_index(function_index).ok_or_else(
                 || miette!("Invalid function index! Not in 1-24 range."),
             )?,
             None,

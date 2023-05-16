@@ -10,17 +10,12 @@ use crate::core::problem::BBOBProblem;
 /// Individual firefly in the swarm.
 #[derive(Clone)]
 pub struct Firefly {
-    pub uniform_zero_to_one_generator: UniformRNG,
     pub position: Vec<f64>,
     pub objective_function_value: f64,
 }
 
 impl Firefly {
-    pub fn new(
-        uniform_zero_to_one_generator: UniformRNG,
-        position: Vec<f64>,
-        problem: &mut BBOBProblem,
-    ) -> Self {
+    pub fn new(position: Vec<f64>, problem: &mut BBOBProblem) -> Self {
         assert_eq!(
             problem.input_dimensions,
             position.len(),
@@ -29,7 +24,6 @@ impl Firefly {
 
         let objective_function_value = problem.evaluate(&position);
         Self {
-            uniform_zero_to_one_generator,
             position,
             objective_function_value,
         }
@@ -39,6 +33,7 @@ impl Firefly {
         &mut self,
         second_firefly: &Firefly,
         problem: &mut BBOBProblem,
+        minus_half_to_half_uniform_generator: &mut UniformRNG,
         options: &FireflyOptions,
     ) {
         // Calculate attraction coefficient (essentially how much the firefly will move towards the `other_firefly`).
@@ -71,7 +66,7 @@ impl Firefly {
                 + attraction_coefficient * (*other_firefly_value - *our_value)
                 // Add some random jitter, uniformly sampled and multiplied by the jitter coefficient.
                 + options.movement_jitter_coefficient
-                    * (self.uniform_zero_to_one_generator.sample() - 0.5f64);
+                    * minus_half_to_half_uniform_generator.sample();
 
             clamp(updated_value, -5f64, 5f64)
         })
