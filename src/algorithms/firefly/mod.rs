@@ -135,14 +135,17 @@ impl<'problem, 'options> FireflySwarm<'problem, 'options> {
         let mut new_firefly_swarm: Vec<Firefly> =
             Vec::with_capacity(self.fireflies.len());
 
-        for main_firefly_index in 0..(self.fireflies.len() - 1) {
-            let (previous_and_main_firefly, better_fireflies) =
-                self.fireflies.split_at(main_firefly_index + 1);
-
+        for main_firefly_index in 0..self.fireflies.len() {
             let mut new_main_firefly =
-                previous_and_main_firefly[main_firefly_index].clone();
+                self.fireflies[main_firefly_index].clone();
 
-            for brighter_firefly in better_fireflies {
+            // For each firefly `F` in the swarm, compare it with each other firefly `C`.
+            // If `C` is lighter (i.e. more fit, smaller objective value (we're minimizing)),
+            // then `F` moves towards `C` (with some light falloff and other factors).
+            // Optimization: as we'd sorted the array previously, we skip all the worse fireflies.
+            for brighter_firefly in
+                self.fireflies.iter().skip(main_firefly_index + 1)
+            {
                 if brighter_firefly.objective_function_value
                     < new_main_firefly.objective_function_value
                 {
@@ -154,6 +157,7 @@ impl<'problem, 'options> FireflySwarm<'problem, 'options> {
                 }
             }
 
+            // Update minimum value if improved.
             if self.is_better_than_minimum(
                 new_main_firefly.objective_function_value,
             ) {
@@ -161,15 +165,12 @@ impl<'problem, 'options> FireflySwarm<'problem, 'options> {
                     new_main_firefly.objective_function_value,
                     new_main_firefly.position.clone(),
                 );
+
                 result.new_global_minimum = true;
             }
 
             new_firefly_swarm.push(new_main_firefly);
         }
-
-        // We don't iterate over the last one (because it doesn't move) so we must append it manually.
-        new_firefly_swarm
-            .push(self.fireflies.last().expect("BUG: swarm is empty!").clone());
 
         // Re-sort the swarm and update self.fireflies in preparation of the next iteration.
         new_firefly_swarm.sort_unstable_by(|first, second| {
