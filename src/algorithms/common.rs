@@ -9,6 +9,7 @@ pub struct Minimum {
 }
 
 impl Minimum {
+    #[inline]
     pub fn new(value: f64, vector: Vec<f64>) -> Minimum {
         Self { value, vector }
     }

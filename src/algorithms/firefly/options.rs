@@ -9,8 +9,9 @@ pub struct FireflyOptions {
     /// A 16-byte random generator seed for the swarm initialization.
     pub in_bounds_random_generator_seed: [u8; 16],
 
-    /// A 16-byte random generator seed for movement jitter.
-    pub zero_to_one_random_generator_seed: [u8; 16],
+    /// A 16-byte seed for seeding each firefly's individual RNG for jitter movement.
+    /// This allows us to parallelize the calculations while preserving determinism.
+    pub firefly_seed_generator_seed: [u8; 16],
 
     /// Maximum of iterations to perform.
     pub maximum_iterations: usize,
@@ -49,11 +50,11 @@ impl Default for FireflyOptions {
             // MIN Values: swarm_size=150, iter=1000, light_absorption=0.001, jitter=0.001 -> 21.100002
             swarm_size: 150,
             in_bounds_random_generator_seed: [
-                199, 248, 17, 170, 248, 248, 15, 82, 75, 207, 232, 76, 38, 70,
+                199, 228, 17, 170, 248, 248, 10, 82, 75, 207, 232, 76, 38, 70,
                 37, 111,
             ],
-            zero_to_one_random_generator_seed: [
-                160, 142, 67, 136, 64, 230, 125, 10, 243, 246, 140, 229, 12, 95,
+            firefly_seed_generator_seed: [
+                160, 142, 67, 131, 64, 230, 125, 10, 243, 246, 140, 239, 12, 95,
                 173, 104,
             ],
             maximum_iterations: 5000,
