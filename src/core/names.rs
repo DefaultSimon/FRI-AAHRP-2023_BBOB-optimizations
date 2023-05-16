@@ -88,7 +88,7 @@ impl BBOBFunctionName {
     }
 
     /// See http://numbbo.github.io/coco/testsuites/bbob for more info.
-    pub fn to_function_index(&self) -> usize {
+    pub fn function_index(&self) -> usize {
         match self {
             BBOBFunctionName::Sphere => 1,
             BBOBFunctionName::SeparableEllipsoidal => 2,
@@ -117,7 +117,7 @@ impl BBOBFunctionName {
         }
     }
 
-    pub fn to_function_name(&self) -> String {
+    pub fn function_name(&self) -> String {
         match self {
             BBOBFunctionName::Sphere => "Sphere",
             BBOBFunctionName::SeparableEllipsoidal => "SeparableEllipsoidal",

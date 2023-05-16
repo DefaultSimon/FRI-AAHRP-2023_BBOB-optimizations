@@ -36,10 +36,10 @@ pub fn cmd_run_firefly_optimization() -> Result<()> {
         let minimum = perform_firefly_swarm_optimization(problem, None)?;
         println!(
             "[{:02}/{:02}|{}] {}Minimum: {:.6}",
-            problem_name.to_function_index(),
+            problem_name.function_index(),
             ALL_BBOB_FUNCTION_NAMES.len(),
-            problem_name.to_function_name(),
-            " ".repeat(32 - problem_name.to_function_name().len()),
+            problem_name.function_name(),
+            " ".repeat(32 - problem_name.function_name().len()),
             minimum.value,
         );
     }

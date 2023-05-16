@@ -28,7 +28,7 @@ impl BBOBSuite {
         let raw_problem = self
             .suite
             .problem_by_function_dimension_instance(
-                bbob_function.to_function_index(),
+                bbob_function.function_index(),
                 40,
                 2023,
             )

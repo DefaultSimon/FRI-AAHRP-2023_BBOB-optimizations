@@ -1,10 +1,11 @@
+mod algorithms;
 mod commands;
 mod core;
-mod algorithms;
 
 use clap::{Parser, Subcommand};
 use coco_rs::LogLevel;
 use miette::{miette, Context, IntoDiagnostic, Result};
+
 use crate::commands::firefly_optimization::cmd_run_firefly_optimization;
 
 #[derive(Parser, Eq, PartialEq)]
@@ -21,7 +22,6 @@ enum CLICommands {
     //     about = "Your description here."
     // )]
     // RunFoo,
-    
     #[command(
         name = "firefly-optimization",
         about = "Runs the Firefly Optimization (variant of swarm optimization algorithm)."
@@ -36,7 +36,7 @@ fn main() -> Result<()> {
         .wrap_err_with(|| miette!("Could not initialize logger."))?;
 
     let args = CLIArgs::parse();
-    
+
     if args.command == CLICommands::RunFireflyOptimization {
         cmd_run_firefly_optimization()?;
     } else {

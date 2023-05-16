@@ -99,9 +99,9 @@ impl<'problem, 'options> FireflySwarm<'problem, 'options> {
             .collect();
 
         fireflies.par_sort_unstable_by(|first, second| {
-            first
+            second
                 .objective_function_value
-                .total_cmp(&second.objective_function_value)
+                .total_cmp(&first.objective_function_value)
         });
 
         Self {
