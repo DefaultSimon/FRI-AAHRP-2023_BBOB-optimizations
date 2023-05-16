@@ -15,6 +15,8 @@ which = "4.4.0"
 dunce = "1.0.4"
 regex = "1.8.1"
 rand = "0.8.5"
+rand_pcg = "0.3.1"
+itertools = "0.10.5"
 
 [[bin]]
 name = "optimization_cli"

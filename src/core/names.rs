@@ -1,4 +1,5 @@
 /// See http://numbbo.github.io/coco/testsuites/bbob for more info.
+#[derive(Copy, Clone)]
 pub enum BBOBFunctionName {
     Sphere,
     SeparableEllipsoidal,
@@ -114,5 +115,45 @@ impl BBOBFunctionName {
             BBOBFunctionName::Katsuura => 23,
             BBOBFunctionName::LunacekBiRastrigin => 24,
         }
+    }
+
+    pub fn to_function_name(&self) -> String {
+        match self {
+            BBOBFunctionName::Sphere => "Sphere",
+            BBOBFunctionName::SeparableEllipsoidal => "SeparableEllipsoidal",
+            BBOBFunctionName::Rastrigin => "Rastrigin",
+            BBOBFunctionName::BucheRastrigin => "BucheRastrigin",
+            BBOBFunctionName::LinearSlope => "LinearSlope",
+            BBOBFunctionName::AttractiveSector => "AttractiveSector",
+            BBOBFunctionName::StepEllipsoidal => "StepEllipsoidal",
+            BBOBFunctionName::RosenbrockFunction => "RosenbrockFunction",
+            BBOBFunctionName::RosenbrockFunctionRotated => {
+                "RosenbrockFunctionRotated"
+            }
+            BBOBFunctionName::Ellipsoidal => "Ellipsoidal",
+            BBOBFunctionName::Discus => "Discus",
+            BBOBFunctionName::BentCigar => "BentCigar",
+            BBOBFunctionName::SharpRidge => "SharpRidge",
+            BBOBFunctionName::DifferentPowers => "DifferentPowers",
+            BBOBFunctionName::RastriginMultiModal => "RastriginMultiModal",
+            BBOBFunctionName::Weierstrass => "Weierstrass",
+            BBOBFunctionName::SchafferF7 => "SchafferF7",
+            BBOBFunctionName::SchafferF7IllConditioned => {
+                "SchafferF7IllConditioned"
+            }
+            BBOBFunctionName::CompositeGriewankRosenbrockF8F2 => {
+                "CompositeGriewankRosenbrockF8F2"
+            }
+            BBOBFunctionName::Schwefel => "Schwefel",
+            BBOBFunctionName::GallagherGaussian101MePeaks => {
+                "GallagherGaussian101MePeaks"
+            }
+            BBOBFunctionName::GallagherGaussian21HiPeaks => {
+                "GallagherGaussian21HiPeaks"
+            }
+            BBOBFunctionName::Katsuura => "Katsuura",
+            BBOBFunctionName::LunacekBiRastrigin => "LunacekBiRastrigin",
+        }
+        .to_string()
     }
 }
