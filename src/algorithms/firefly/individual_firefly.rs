@@ -46,7 +46,10 @@ impl Firefly {
             .position
             .iter()
             .zip(second_firefly.position.iter())
-            .map(|(first, second)| (*first - *second).powi(2))
+            .map(|(first, second)| {
+                let difference = *first - *second;
+                difference * difference
+            })
             .sum::<f64>();
 
         let attraction_coefficient = options.attractiveness_coefficient
