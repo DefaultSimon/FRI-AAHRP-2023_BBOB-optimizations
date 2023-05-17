@@ -48,47 +48,145 @@ fn get_optimized_hyperparameters(problem: BBOBFunction) -> FullFireflyOptions {
         ],
         restart_count: 4,
         run_options: FireflyRunOptions {
-            swarm_size: 150,
+            swarm_size: 80,
             maximum_iterations: 2000,
             consider_stuck_after_runs: 500,
             attractiveness_coefficient: 1f64,
             light_absorption_coefficient: 0.025,
-            movement_jitter_coefficient: 0.01,
+            movement_jitter_starting_coefficient: 0.1,
+            movement_jitter_minimum_coefficient: 0.005,
+            movement_jitter_cooling_factor: 0.98,
         },
     };
 
     match problem {
-        BBOBFunction::Sphere => defaults,
-        BBOBFunction::SeparableEllipsoidal => FullFireflyOptions {
+        // OK (delta=0.00005)
+        BBOBFunction::Sphere => FullFireflyOptions {
+            random_generator_seed: [
+                133, 66, 79, 177, 132, 191, 158, 217, 101, 170, 134, 109, 79,
+                56, 2, 31,
+            ],
+            restart_count: 4,
             run_options: FireflyRunOptions {
-                swarm_size: 50,
+                swarm_size: 80,
                 maximum_iterations: 5000,
-                consider_stuck_after_runs: 300,
-                ..defaults.run_options
+                consider_stuck_after_runs: 500,
+                attractiveness_coefficient: 1f64,
+                light_absorption_coefficient: 0.02,
+                movement_jitter_starting_coefficient: 0.1,
+                movement_jitter_minimum_coefficient: 0.005,
+                movement_jitter_cooling_factor: 0.98,
             },
-            ..defaults
         },
-        BBOBFunction::Rastrigin => defaults,
+        // NOT OK
+        BBOBFunction::SeparableEllipsoidal => FullFireflyOptions {
+            random_generator_seed: [
+                50, 61, 220, 154, 210, 7, 26, 14, 226, 210, 241, 67, 109, 149,
+                214, 27,
+            ],
+            restart_count: 4,
+            run_options: FireflyRunOptions {
+                swarm_size: 80,
+                maximum_iterations: 14000,
+                consider_stuck_after_runs: 500,
+                attractiveness_coefficient: 0.99f64,
+                light_absorption_coefficient: 0.001,
+                movement_jitter_starting_coefficient: 0.3,
+                movement_jitter_minimum_coefficient: 0.1,
+                movement_jitter_cooling_factor: 0.9999,
+            },
+        },
+        // NOT OK
+        BBOBFunction::Rastrigin => FullFireflyOptions {
+            random_generator_seed: [
+                133, 66, 79, 177, 132, 191, 158, 217, 101, 170, 134, 109, 79,
+                56, 2, 31,
+            ],
+            restart_count: 4,
+            run_options: FireflyRunOptions {
+                swarm_size: 40,
+                maximum_iterations: 5000,
+                consider_stuck_after_runs: 500,
+                attractiveness_coefficient: 1f64,
+                light_absorption_coefficient: 0.025,
+                movement_jitter_starting_coefficient: 0.1,
+                movement_jitter_minimum_coefficient: 0.01,
+                movement_jitter_cooling_factor: 0.995,
+            },
+        },
+        // NOT OK
         BBOBFunction::BucheRastrigin => defaults,
+        // NOT OK
         BBOBFunction::LinearSlope => defaults,
+        // NOT OK
         BBOBFunction::AttractiveSector => defaults,
+        // NOT OK
         BBOBFunction::StepEllipsoidal => defaults,
+        // NOT OK
         BBOBFunction::RosenbrockFunction => defaults,
-        BBOBFunction::RosenbrockFunctionRotated => defaults,
+        // NEARLY THERE (delta=5.27988)
+        BBOBFunction::RosenbrockFunctionRotated => FullFireflyOptions {
+            random_generator_seed: [
+                131, 66, 79, 177, 132, 191, 158, 217, 16, 170, 134, 80, 79, 56,
+                2, 31,
+            ],
+            restart_count: 4,
+            run_options: FireflyRunOptions {
+                swarm_size: 30,
+                maximum_iterations: 100000,
+                consider_stuck_after_runs: 500,
+                attractiveness_coefficient: 1f64,
+                light_absorption_coefficient: 0.025,
+                movement_jitter_starting_coefficient: 0.1,
+                movement_jitter_minimum_coefficient: 0.01,
+                movement_jitter_cooling_factor: 0.995,
+            },
+        },
+        // NOT OK
         BBOBFunction::Ellipsoidal => defaults,
+        // NEARLY THERE (delta=25.36596)
         BBOBFunction::Discus => defaults,
+        // NOT OK
         BBOBFunction::BentCigar => defaults,
+        // NOT OK
         BBOBFunction::SharpRidge => defaults,
-        BBOBFunction::DifferentPowers => defaults,
+        // OK (delta=0.00107)
+        BBOBFunction::DifferentPowers => FullFireflyOptions {
+            random_generator_seed: [
+                133, 66, 79, 177, 132, 191, 158, 217, 101, 170, 134, 109, 79,
+                56, 2, 31,
+            ],
+            restart_count: 4,
+            run_options: FireflyRunOptions {
+                swarm_size: 80,
+                maximum_iterations: 4000,
+                consider_stuck_after_runs: 500,
+                attractiveness_coefficient: 1f64,
+                light_absorption_coefficient: 0.02,
+                movement_jitter_starting_coefficient: 0.1,
+                movement_jitter_minimum_coefficient: 0.01,
+                movement_jitter_cooling_factor: 0.999,
+            },
+        },
+        // NOT OK
         BBOBFunction::RastriginMultiModal => defaults,
+        // NOT OK
         BBOBFunction::Weierstrass => defaults,
+        // NOT OK
         BBOBFunction::SchafferF7 => defaults,
+        // NOT OK
         BBOBFunction::SchafferF7IllConditioned => defaults,
+        // NOT OK
         BBOBFunction::CompositeGriewankRosenbrockF8F2 => defaults,
+        // NOT OK
         BBOBFunction::Schwefel => defaults,
+        // NOT OK
         BBOBFunction::GallagherGaussian101MePeaks => defaults,
+        // NOT OK
         BBOBFunction::GallagherGaussian21HiPeaks => defaults,
+        // NOT OK
         BBOBFunction::Katsuura => defaults,
+        // NOT OK
         BBOBFunction::LunacekBiRastrigin => defaults,
     }
 }

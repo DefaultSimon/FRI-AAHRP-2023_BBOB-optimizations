@@ -1,29 +1,76 @@
 /// See http://numbbo.github.io/coco/testsuites/bbob for more info.
 #[derive(Copy, Clone)]
 pub enum BBOBFunction {
+    /// Index: 1.
     Sphere,
+
+    /// Index: 2.
     SeparableEllipsoidal,
+
+    /// Index: 3.
     Rastrigin,
+
+    /// Index: 4.
     BucheRastrigin,
+
+    /// Index: 5.
     LinearSlope,
+
+    /// Index: 6.
     AttractiveSector,
+
+    /// Index: 7.
     StepEllipsoidal,
+
+    /// Index: 8.
     RosenbrockFunction,
+
+    /// Index: 9.
     RosenbrockFunctionRotated,
+
+    /// Index: 10.
     Ellipsoidal,
+
+    /// Index: 11.
     Discus,
+
+    /// Index: 12.
     BentCigar,
+
+    /// Index: 13.
     SharpRidge,
+
+    /// Index: 14.
     DifferentPowers,
+
+    /// Index: 15.
     RastriginMultiModal,
+
+    /// Index: 16.
     Weierstrass,
+
+    /// Index: 17.
     SchafferF7,
+
+    /// Index: 18.
     SchafferF7IllConditioned,
+
+    /// Index: 19.
     CompositeGriewankRosenbrockF8F2,
+
+    /// Index: 20.
     Schwefel,
+
+    /// Index: 21.
     GallagherGaussian101MePeaks,
+
+    /// Index: 22.
     GallagherGaussian21HiPeaks,
+
+    /// Index: 23.
     Katsuura,
+
+    /// Index: 24.
     LunacekBiRastrigin,
 }
 

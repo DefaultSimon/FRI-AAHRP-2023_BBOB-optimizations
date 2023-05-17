@@ -1,3 +1,5 @@
+use std::cmp::min;
+
 use crate::algorithms::firefly::individual_firefly::Firefly;
 use crate::algorithms::firefly::rng::{
     UniformF64BoundedRandomGenerator,
@@ -25,12 +27,15 @@ pub struct FireflySwarm<'p: 'pref, 'pref, 'options> {
 
     minus_half_to_half_uniform_generator: UniformF64BoundedRandomGenerator,
 
-    pub best_solution: Option<PointValue>,
-
     options: &'options FireflyRunOptions,
 
-    // Vector of fireflies - this is the swarm.
+    /// Current best solution from all iterations up to this point.
+    pub best_solution: Option<PointValue>,
+
+    /// Vector of fireflies - this is the swarm.
     fireflies: Vec<Firefly>,
+
+    current_movement_jitter_coefficient: f64,
 }
 
 impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
@@ -77,6 +82,8 @@ impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
             best_solution: None,
             options,
             fireflies,
+            current_movement_jitter_coefficient: options
+                .movement_jitter_starting_coefficient,
         }
     }
 
@@ -123,8 +130,9 @@ impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
                 {
                     new_main_firefly.move_towards(
                         brighter_firefly,
-                        &mut self.problem,
+                        self.problem,
                         &mut self.minus_half_to_half_uniform_generator,
+                        self.current_movement_jitter_coefficient,
                         self.options,
                     );
                 }
@@ -154,6 +162,12 @@ impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
         });
 
         self.fireflies = new_firefly_swarm;
+
+        // Update the jitter coefficient by multiplying it by the cooling factor.
+        self.current_movement_jitter_coefficient = (self
+            .current_movement_jitter_coefficient
+            * self.options.movement_jitter_cooling_factor)
+            .max(self.options.movement_jitter_minimum_coefficient);
 
         result
     }

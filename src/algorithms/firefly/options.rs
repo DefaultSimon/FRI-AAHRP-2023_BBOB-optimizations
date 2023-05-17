@@ -1,10 +1,13 @@
 #[derive(Debug, Clone)]
 pub struct FullFireflyOptions {
+    /// Main random generator seed. This is used to generate other seeds
+    /// used in various parts of the firefly algorithm.
     pub random_generator_seed: [u8; 16],
 
     /// How many restarts to do in one full firefly optimization.
     pub restart_count: usize,
 
+    /// Run-specific options, like the iteration count and the swarm size.
     pub run_options: FireflyRunOptions,
 }
 
@@ -29,12 +32,6 @@ pub struct FireflyRunOptions {
     /// According to [1], the optimal swarm size is between 15 to 100 (or 25 to 40).
     pub swarm_size: usize,
 
-    /// A 16-byte random generator seed for the swarm initialization.
-    // pub in_bounds_random_generator_seed: [u8; 16],
-
-    /// A 16-byte seed for generating movement jitter.
-    // pub jitter_movement_random_generator_seed: [u8; 16],
-
     /// Maximum of iterations to perform.
     pub maximum_iterations: usize,
 
@@ -53,8 +50,15 @@ pub struct FireflyRunOptions {
 
     /// To prevent getting stuck in local minimums, we add some jitter to firefly movements,
     /// this coefficient controls how much. The value is generally around `0.01 * problemSize`.
-    // TODO Add simulated-annealing-like behaviour, see [1], page 2: 2.2 Parameter settings.
-    pub movement_jitter_coefficient: f64,
+    pub movement_jitter_starting_coefficient: f64,
+
+    /// Lower bound for the movement jitter coefficient.
+    pub movement_jitter_minimum_coefficient: f64,
+
+    /// Cooling factor associated with the movement jitter coefficient.
+    /// A value of `0.95` means the jitter decreases by that factor each iteration.
+    /// A value of `1` effectively means no jitter decrease is applied.
+    pub movement_jitter_cooling_factor: f64,
 }
 
 impl Default for FireflyRunOptions {
@@ -65,7 +69,9 @@ impl Default for FireflyRunOptions {
             consider_stuck_after_runs: 500,
             attractiveness_coefficient: 1f64,
             light_absorption_coefficient: 0.025,
-            movement_jitter_coefficient: 0.01,
+            movement_jitter_starting_coefficient: 0.01,
+            movement_jitter_minimum_coefficient: 0.005,
+            movement_jitter_cooling_factor: 0.99,
         }
     }
 }

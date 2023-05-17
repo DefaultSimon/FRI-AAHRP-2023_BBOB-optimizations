@@ -34,6 +34,7 @@ impl Firefly {
         second_firefly: &Firefly,
         problem: &mut BBOBProblem,
         minus_half_to_half_uniform_generator: &mut UniformF64BoundedRandomGenerator,
+        movement_jitter_coefficient: f64,
         options: &FireflyRunOptions,
     ) {
         // Calculate attraction coefficient (essentially how much the firefly will move towards the `other_firefly`).
@@ -65,7 +66,7 @@ impl Firefly {
                 // Move towards the brighter firefly by the attraction coefficient.
                 + attraction_coefficient * (*other_firefly_value - *our_value)
                 // Add some random jitter, uniformly sampled and multiplied by the jitter coefficient.
-                + options.movement_jitter_coefficient
+                + movement_jitter_coefficient
                     * minus_half_to_half_uniform_generator.sample();
 
             clamp(updated_value, -5f64, 5f64)
