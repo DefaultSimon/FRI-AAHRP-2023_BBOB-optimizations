@@ -18,6 +18,13 @@ impl Bounds {
         }
     }
 
+    pub fn full_f64_range() -> Self {
+        Self {
+            lower_bound: f64::MIN,
+            upper_bound: f64::MAX,
+        }
+    }
+
     pub fn uniform_random_generator(&self) -> Uniform<f64> {
         Uniform::new_inclusive(self.lower_bound, self.upper_bound)
     }

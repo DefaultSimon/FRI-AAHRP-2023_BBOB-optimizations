@@ -3,8 +3,8 @@ use std::iter::zip;
 
 use num::clamp;
 
-use crate::algorithms::firefly::options::FireflyOptions;
-use crate::algorithms::firefly::rng::UniformRNG;
+use crate::algorithms::firefly::options::RunFireflyOptions;
+use crate::algorithms::firefly::rng::UniformF64BoundedRandomGenerator;
 use crate::core::problem::BBOBProblem;
 
 /// Individual firefly in the swarm.
@@ -33,8 +33,8 @@ impl Firefly {
         &mut self,
         second_firefly: &Firefly,
         problem: &mut BBOBProblem,
-        minus_half_to_half_uniform_generator: &mut UniformRNG,
-        options: &FireflyOptions,
+        minus_half_to_half_uniform_generator: &mut UniformF64BoundedRandomGenerator,
+        options: &RunFireflyOptions,
     ) {
         // Calculate attraction coefficient (essentially how much the firefly will move towards the `other_firefly`).
         let euclidean_distance_squared = self
