@@ -2,13 +2,14 @@ use std::num::NonZeroUsize;
 use std::time::Instant;
 
 use clap::{Args, Subcommand};
+use indicatif::MultiProgress;
 use itertools::Itertools;
 use miette::{miette, Result};
 
 use crate::algorithms::firefly::{
     perform_firefly_swarm_optimization,
+    FireflyRunOptions,
     FullFireflyOptions,
-    RunFireflyOptions,
 };
 use crate::core::functions::{BBOBFunction, ALL_BBOB_FUNCTIONS};
 use crate::core::suite::BBOBSuite;
@@ -46,7 +47,7 @@ fn get_optimized_hyperparameters(problem: BBOBFunction) -> FullFireflyOptions {
             31,
         ],
         restart_count: 4,
-        run_options: RunFireflyOptions {
+        run_options: FireflyRunOptions {
             swarm_size: 150,
             maximum_iterations: 2000,
             consider_stuck_after_runs: 500,
@@ -58,7 +59,15 @@ fn get_optimized_hyperparameters(problem: BBOBFunction) -> FullFireflyOptions {
 
     match problem {
         BBOBFunction::Sphere => defaults,
-        BBOBFunction::SeparableEllipsoidal => defaults,
+        BBOBFunction::SeparableEllipsoidal => FullFireflyOptions {
+            run_options: FireflyRunOptions {
+                swarm_size: 50,
+                maximum_iterations: 5000,
+                consider_stuck_after_runs: 300,
+                ..defaults.run_options
+            },
+            ..defaults
+        },
         BBOBFunction::Rastrigin => defaults,
         BBOBFunction::BucheRastrigin => defaults,
         BBOBFunction::LinearSlope => defaults,
@@ -101,9 +110,16 @@ pub fn cmd_run_all_problems() -> Result<()> {
             get_optimized_hyperparameters(bbob_function);
         let problem = suite.problem(bbob_function, None)?;
 
+        println!(
+            "[Problem {:02}/{:02}: {}]",
+            bbob_function.index(),
+            ALL_BBOB_FUNCTIONS.len(),
+            bbob_function.name(),
+        );
+
         let optimization_results = perform_firefly_swarm_optimization(
             problem,
-            Some(optimized_hyperparameters.clone()),
+            optimized_hyperparameters.clone(),
         )?;
 
         let problem_delta_time = problem_start_time.elapsed().as_secs_f64();
@@ -117,10 +133,7 @@ pub fn cmd_run_all_problems() -> Result<()> {
             .join(",");
 
         println!(
-            "[Problem {:02}/{:02}: {}] - {:?}/{} iterations, {:.4} seconds",
-            bbob_function.index(),
-            ALL_BBOB_FUNCTIONS.len(),
-            bbob_function.name(),
+            "  Optimized. Performed {:?}/{} iterations in {:.4} seconds",
             optimization_results.iterations_performed_per_restart,
             optimized_hyperparameters.run_options.maximum_iterations,
             problem_delta_time
@@ -173,7 +186,7 @@ pub fn cmd_run_specific_problem(args: CLIRunOneArgs) -> Result<()> {
 
     let optimization_results = perform_firefly_swarm_optimization(
         problem,
-        Some(optimized_hyperparameters.clone()),
+        optimized_hyperparameters.clone(),
     )?;
 
     let problem_delta_time = problem_start_time.elapsed().as_secs_f64();
@@ -186,8 +199,9 @@ pub fn cmd_run_specific_problem(args: CLIRunOneArgs) -> Result<()> {
         .map(|parameter| parameter.to_string())
         .join(",");
 
+    println!();
     println!(
-        "[Problem {:02}/{:02}: {}] - {:?}/{} iterations, {:.4} seconds",
+        "Problem {:02}/{:02}: {}  -  {:?}/{} iterations, {:.4} seconds",
         bbob_function.index(),
         ALL_BBOB_FUNCTIONS.len(),
         bbob_function.name(),

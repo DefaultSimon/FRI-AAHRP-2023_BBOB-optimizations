@@ -4,7 +4,7 @@ use crate::algorithms::firefly::rng::{
     UniformU8RandomGenerator,
 };
 use crate::algorithms::firefly::utilities::PointValue;
-use crate::algorithms::firefly::RunFireflyOptions;
+use crate::algorithms::firefly::FireflyRunOptions;
 use crate::core::problem::{BBOBProblem, Bounds};
 
 pub struct IterationResult {
@@ -27,7 +27,7 @@ pub struct FireflySwarm<'p: 'pref, 'pref, 'options> {
 
     pub best_solution: Option<PointValue>,
 
-    options: &'options RunFireflyOptions,
+    options: &'options FireflyRunOptions,
 
     // Vector of fireflies - this is the swarm.
     fireflies: Vec<Firefly>,
@@ -38,7 +38,7 @@ impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
     pub fn initialize(
         mut problem: &'pref mut BBOBProblem<'p>,
         seed_generator: &mut UniformU8RandomGenerator,
-        options: &'options RunFireflyOptions,
+        options: &'options FireflyRunOptions,
     ) -> Self {
         let input_dimensions = problem.input_dimensions;
 

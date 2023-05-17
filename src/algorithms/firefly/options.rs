@@ -5,7 +5,7 @@ pub struct FullFireflyOptions {
     /// How many restarts to do in one full firefly optimization.
     pub restart_count: usize,
 
-    pub run_options: RunFireflyOptions,
+    pub run_options: FireflyRunOptions,
 }
 
 impl Default for FullFireflyOptions {
@@ -16,7 +16,7 @@ impl Default for FullFireflyOptions {
                 56, 2, 31,
             ],
             restart_count: 4,
-            run_options: RunFireflyOptions::default(),
+            run_options: FireflyRunOptions::default(),
         }
     }
 }
@@ -24,7 +24,7 @@ impl Default for FullFireflyOptions {
 /// References:
 ///  - [1: Firefly Algorithm: Recent Advances and Applications](https://arxiv.org/abs/1308.3898)
 #[derive(Debug, Clone)]
-pub struct RunFireflyOptions {
+pub struct FireflyRunOptions {
     /// Specified the amount of fireflies in the swarm. In FA, the swarm size is constant.
     /// According to [1], the optimal swarm size is between 15 to 100 (or 25 to 40).
     pub swarm_size: usize,
@@ -57,7 +57,7 @@ pub struct RunFireflyOptions {
     pub movement_jitter_coefficient: f64,
 }
 
-impl Default for RunFireflyOptions {
+impl Default for FireflyRunOptions {
     fn default() -> Self {
         Self {
             swarm_size: 150,
