@@ -27,7 +27,7 @@ pub enum BBOBFunction {
     LunacekBiRastrigin,
 }
 
-pub const ALL_BBOB_FUNCTION_NAMES: [BBOBFunction; 24] = [
+pub const ALL_BBOB_FUNCTIONS: [BBOBFunction; 24] = [
     BBOBFunction::Sphere,
     BBOBFunction::SeparableEllipsoidal,
     BBOBFunction::Rastrigin,

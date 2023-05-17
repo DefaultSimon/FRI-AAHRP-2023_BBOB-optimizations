@@ -6,27 +6,24 @@ use clap::{Parser, Subcommand};
 use coco_rs::LogLevel;
 use miette::{miette, Context, IntoDiagnostic, Result};
 
-use crate::commands::firefly_optimization::cmd_run_firefly_optimization;
+use crate::commands::firefly_optimization::{
+    cmd_run_firefly_optimization,
+    CLIFireflyOptimizationArgs,
+};
 
-#[derive(Parser, Eq, PartialEq)]
+#[derive(Parser)]
 struct CLIArgs {
     #[command(subcommand)]
     pub command: CLICommands,
 }
 
-#[derive(Subcommand, Eq, PartialEq)]
+#[derive(Subcommand)]
 enum CLICommands {
-    // Example:
-    // #[command(
-    //     name = "run-foo",
-    //     about = "Your description here."
-    // )]
-    // RunFoo,
     #[command(
-        name = "firefly-optimization",
+        name = "run-firefly-optimization",
         about = "Runs the Firefly Optimization (variant of swarm optimization algorithm)."
     )]
-    RunFireflyOptimization,
+    RunFireflyOptimization(CLIFireflyOptimizationArgs),
 }
 
 fn main() -> Result<()> {
@@ -37,10 +34,10 @@ fn main() -> Result<()> {
 
     let args = CLIArgs::parse();
 
-    if args.command == CLICommands::RunFireflyOptimization {
-        cmd_run_firefly_optimization()?;
-    } else {
-        panic!("Invalid command!");
+    // FIXME: Remove this `allow` when multiple commands are added.
+    #[allow(irrefutable_let_patterns)]
+    if let CLICommands::RunFireflyOptimization(args) = args.command {
+        cmd_run_firefly_optimization(args)?;
     }
 
     Ok(())
