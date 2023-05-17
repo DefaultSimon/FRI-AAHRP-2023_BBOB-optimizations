@@ -3,8 +3,8 @@ use std::iter::zip;
 
 use num::clamp;
 
-use crate::algorithms::firefly::options::FireflyRunOptions;
-use crate::algorithms::firefly::rng::UniformF64BoundedRandomGenerator;
+use crate::algorithms::common::rng::UniformF64BoundedRandomGenerator;
+use crate::algorithms::firefly::FireflyRunOptions;
 use crate::core::problem::BBOBProblem;
 
 /// Individual firefly in the swarm.

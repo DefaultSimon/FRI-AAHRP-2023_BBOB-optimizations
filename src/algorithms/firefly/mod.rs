@@ -3,7 +3,6 @@ use std::time::Duration;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use miette::{IntoDiagnostic, Result};
 
-use super::common::Minimum;
 use crate::core::problem::BBOBProblem;
 
 mod individual_firefly;
@@ -11,10 +10,10 @@ mod options;
 pub use options::{FireflyRunOptions, FullFireflyOptions};
 use swarm::FireflySwarm;
 
-use crate::algorithms::firefly::rng::UniformU8RandomGenerator;
+use crate::algorithms::common::rng::UniformU8RandomGenerator;
+use crate::algorithms::common::structs::Minimum;
 use crate::algorithms::firefly::utilities::PointValue;
 
-mod rng;
 mod swarm;
 pub mod utilities;
 

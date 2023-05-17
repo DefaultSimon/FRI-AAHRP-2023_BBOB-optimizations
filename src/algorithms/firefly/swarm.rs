@@ -1,10 +1,8 @@
-use std::cmp::min;
-
-use crate::algorithms::firefly::individual_firefly::Firefly;
-use crate::algorithms::firefly::rng::{
+use crate::algorithms::common::rng::{
     UniformF64BoundedRandomGenerator,
     UniformU8RandomGenerator,
 };
+use crate::algorithms::firefly::individual_firefly::Firefly;
 use crate::algorithms::firefly::utilities::PointValue;
 use crate::algorithms::firefly::FireflyRunOptions;
 use crate::core::problem::{BBOBProblem, Bounds};

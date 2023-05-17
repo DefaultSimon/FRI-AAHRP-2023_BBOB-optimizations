@@ -2,7 +2,6 @@ use std::num::NonZeroUsize;
 use std::time::Instant;
 
 use clap::{Args, Subcommand};
-use indicatif::MultiProgress;
 use itertools::Itertools;
 use miette::{miette, Result};
 
@@ -14,13 +13,13 @@ use crate::algorithms::firefly::{
 use crate::core::functions::{BBOBFunction, ALL_BBOB_FUNCTIONS};
 use crate::core::suite::BBOBSuite;
 
-#[derive(Args)]
+#[derive(Args, Eq, PartialEq)]
 pub struct CLIFireflyOptimizationArgs {
     #[command(subcommand)]
     pub mode: CLIFireflyOptimizationMode,
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Eq, PartialEq)]
 pub enum CLIFireflyOptimizationMode {
     #[command(name = "all", about = "Optimize all 24 problems.")]
     AllProblems,
@@ -29,7 +28,7 @@ pub enum CLIFireflyOptimizationMode {
     OneProblem(CLIRunOneArgs),
 }
 
-#[derive(Args)]
+#[derive(Args, Eq, PartialEq)]
 pub struct CLIRunOneArgs {
     #[arg(
         short = 'p',
