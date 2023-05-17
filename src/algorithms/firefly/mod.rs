@@ -1,14 +1,13 @@
 use individual_firefly::Firefly;
 use miette::{miette, Result};
-use rng::UniformRNG;
+use super::common::rng::UniformRNG;
 
-use super::common::Minimum;
+use super::common::structs::Minimum;
 use crate::core::problem::{BBOBProblem, Bounds};
 
 mod individual_firefly;
 mod options;
 pub use options::FireflyOptions;
-mod rng;
 
 // TODO Notes: we could merge the firefly algorithm with the multi-swarm optimization strategy (multiple independent swarms)
 //      See https://en.wikipedia.org/wiki/Multi-swarm_optimization

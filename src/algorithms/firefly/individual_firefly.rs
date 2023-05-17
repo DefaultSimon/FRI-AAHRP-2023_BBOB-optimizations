@@ -4,7 +4,7 @@ use std::iter::zip;
 use num::clamp;
 
 use crate::algorithms::firefly::options::FireflyOptions;
-use crate::algorithms::firefly::rng::UniformRNG;
+use crate::algorithms::common::rng::UniformRNG;
 use crate::core::problem::BBOBProblem;
 
 /// Individual firefly in the swarm.
