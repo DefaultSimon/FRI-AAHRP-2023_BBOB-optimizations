@@ -110,9 +110,10 @@ pub fn cmd_run_specific_problem(args: CLIRunOneArgs) -> Result<()> {
             })?;
 
     println!(
-        "-- Running firefly optimization on problem {} ({}). --",
+        "[[Problem {} ({}) | global minimum is {:.4}]]\n",
         bbob_function.index(),
-        bbob_function.name()
+        bbob_function.name(),
+        bbob_function.global_minimum(),
     );
     println!();
 
@@ -124,10 +125,8 @@ pub fn cmd_run_specific_problem(args: CLIRunOneArgs) -> Result<()> {
     let optimized_hyperparameters = get_optimized_hyperparameters(bbob_function);
     let problem = suite.problem(bbob_function)?;
 
-    let optimization_results = perform_firefly_swarm_optimization(
-        problem,
-        optimized_hyperparameters.clone(),
-    )?;
+    let optimization_results =
+        perform_firefly_swarm_optimization(problem, optimized_hyperparameters)?;
 
     let problem_delta_time = problem_start_time.elapsed().as_secs_f64();
 
@@ -139,6 +138,7 @@ pub fn cmd_run_specific_problem(args: CLIRunOneArgs) -> Result<()> {
         .map(|parameter| parameter.to_string())
         .join(",");
 
+    println!();
     println!();
     println!(
         "Problem {:02}/{:02} ({}) optimized in {:.4} seconds.",
@@ -158,7 +158,6 @@ pub fn cmd_run_specific_problem(args: CLIRunOneArgs) -> Result<()> {
         "  Distance from global minimum: {:.5}",
         optimization_results.minimum.value - bbob_function.global_minimum()
     );
-    println!();
 
     Ok(())
 }
