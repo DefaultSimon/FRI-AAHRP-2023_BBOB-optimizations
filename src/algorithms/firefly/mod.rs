@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use colored::Colorize;
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use miette::{IntoDiagnostic, Result};
 
@@ -17,9 +18,11 @@ use swarm::FireflySwarm;
 use crate::algorithms::common::rng::UniformU8RandomGenerator;
 use crate::algorithms::common::structs::Minimum;
 use crate::algorithms::firefly::utilities::PointValue;
+use crate::algorithms::firefly::visualization::FireflyOptimizationMultiProgressBar;
 
-mod swarm;
+pub mod swarm;
 pub mod utilities;
+pub mod visualization;
 
 
 pub struct FireflyOptimizationRunResult {
@@ -48,8 +51,8 @@ pub fn perform_firefly_swarm_optimization(
     mut problem: BBOBProblem,
     options: FullFireflyOptions,
 ) -> Result<FireflyOptimizationRunResult> {
-    // Set up multi-progress bar.
-    let multi_progress_bar = MultiProgress::new();
+    // Set up progress bar for this optimization run.
+    let multi_progress_bar = FireflyOptimizationMultiProgressBar::new();
     let progress_bar_style_finished =
         ProgressStyle::with_template("{msg}").into_diagnostic()?;
 
@@ -68,22 +71,13 @@ pub fn perform_firefly_swarm_optimization(
     for (run_index, run_options) in
         options.per_restart_options.iter().enumerate()
     {
-        // Set up progress bar.
-        let progress_bar_style_running = ProgressStyle::with_template(&format!(
-            "[run {}/{}]  {{bar:40}} {{pos}}/{{len}} (ETA {{eta}}): {{msg}}",
+        // Set up progress bar for this run.
+        let progress_bar = multi_progress_bar.new_run(
             run_index + 1,
             options.per_restart_options.len(),
-        ))
-        .into_diagnostic()?;
-
-        let progress_bar = multi_progress_bar.add(
-            ProgressBar::new(run_options.maximum_iterations as u64)
-                .with_style(progress_bar_style_running.clone())
-                .with_message("INF"),
-        );
-
-        progress_bar.enable_steady_tick(Duration::from_secs_f64(1f64 / 8f64));
-
+            run_options.maximum_iterations,
+        )?;
+        progress_bar.start();
 
         // Initialize swarm and run.
         let mut swarm = FireflySwarm::initialize(
@@ -100,18 +94,8 @@ pub fn perform_firefly_swarm_optimization(
             // Perform a single iteration of the run.
             swarm.perform_iteration();
 
-            progress_bar.set_position(iterations_performed as u64);
-            progress_bar.set_message(format!(
-                "jitter={:.4} iterations_since_improvement={:04}/{}    value={:.6}",
-                swarm.current_movement_jitter_coefficient,
-                swarm.iterations_since_improvement,
-                run_options.consider_stuck_after_n_iterations,
-                swarm
-                    .current_best_solution
-                    .as_ref()
-                    .expect("BUG: Invalid swarm, no solution at all.")
-                    .value,
-            ));
+            // Update progress bar.
+            progress_bar.update(iterations_performed, run_options, &swarm);
 
             // If stuck for `consider_stuck_after_runs` or more iterations, abort the run.
             if swarm.iterations_since_improvement
@@ -138,17 +122,14 @@ pub fn perform_firefly_swarm_optimization(
 
 
         // Clean up progress bar.
-        progress_bar.set_style(progress_bar_style_finished.clone());
-        progress_bar.finish_with_message(format!(
-            "[run {}/{}]  {}/{:04} iterations, minimum: {:.5}",
+        progress_bar.finish(
             run_index + 1,
             options.per_restart_options.len(),
             iterations_performed,
-            run_options.maximum_iterations,
             swarm_solution_value,
-        ));
-        progress_bar.disable_steady_tick();
-        progress_bar.tick();
+            problem.name.global_minimum(),
+            run_options,
+        )?;
     }
 
     let best_solution =

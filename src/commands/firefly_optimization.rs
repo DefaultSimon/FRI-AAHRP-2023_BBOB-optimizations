@@ -110,7 +110,7 @@ pub fn cmd_run_specific_problem(args: CLIRunOneArgs) -> Result<()> {
             })?;
 
     println!(
-        "[[Problem {} ({}) | global minimum is {:.4}]]\n",
+        "[[Problem {} ({}) | global minimum is {:.4}]]",
         bbob_function.index(),
         bbob_function.name(),
         bbob_function.global_minimum(),

@@ -20,6 +20,7 @@ itertools = "0.10.5"
 num = "0.4.0"
 pad = "0.1.6"
 indicatif = "0.17.3"
+colored = "2.0.0"
 
 [[bin]]
 name = "optimization_cli"
