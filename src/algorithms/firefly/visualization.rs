@@ -5,7 +5,7 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use miette::{IntoDiagnostic, Result};
 
 use crate::algorithms::firefly::swarm::FireflySwarm;
-use crate::algorithms::firefly::FireflyRunOptions;
+use crate::algorithms::firefly::{FireflyRunOptions, OptimizationRunType};
 
 pub struct FireflyOptimizationMultiProgressBar {
     multi_bar: MultiProgress,
@@ -21,15 +21,13 @@ impl FireflyOptimizationMultiProgressBar {
 
     pub fn new_run(
         &self,
-        run_number: usize,
-        total_runs: usize,
-        maximum_iterations: usize,
+        run_type: OptimizationRunType,
+        options: &FireflyRunOptions,
     ) -> Result<FireflySingleRunProgressBar> {
         FireflySingleRunProgressBar::from_multi_progress_bar(
             &self.multi_bar,
-            run_number,
-            total_runs,
-            maximum_iterations as u64,
+            run_type,
+            options,
         )
     }
 }
@@ -37,25 +35,41 @@ impl FireflyOptimizationMultiProgressBar {
 
 pub struct FireflySingleRunProgressBar {
     progress_bar: ProgressBar,
+    run_type: OptimizationRunType,
 }
 
 impl FireflySingleRunProgressBar {
     pub fn from_multi_progress_bar(
-        multi_progress: &MultiProgress,
-        run_number: usize,
-        total_runs: usize,
-        maximum_iterations: u64,
+        multi_progress_bar: &MultiProgress,
+        run_type: OptimizationRunType,
+        options: &FireflyRunOptions,
     ) -> Result<Self> {
-        let running_style = ProgressStyle::with_template(&format!(
-            "[run {}/{}] | {{bar:40}} | iteration {{pos}}/{{len}}: {{msg}}",
-            run_number, total_runs,
-        ))
-        .into_diagnostic()?;
+        let running_style = match run_type {
+            OptimizationRunType::Exploration { run_number, total_runs } => {
+                ProgressStyle::with_template(&format!(
+                    "[ {} | run {}/{}] |{{bar:40}}| iteration {{pos}}/{{len}}: {{msg}}",
+                    "  explore  ".bright_yellow().bold(), run_number, total_runs,
+                ))
+                    .into_diagnostic()?
+            }
+            OptimizationRunType::Refinement { run_number, total_runs, .. } => {
+                ProgressStyle::with_template(&format!(
+                    "[ {} | run {}/{}] |{{bar:40}}| iteration {{pos}}/{{len}}: {{msg}}",
+                    "refine best".bright_yellow().bold(), run_number, total_runs,
+                ))
+                    .into_diagnostic()?
+            }
+        };
 
-        let progress_bar = multi_progress
-            .add(ProgressBar::new(maximum_iterations).with_style(running_style));
+        let progress_bar = multi_progress_bar.add(
+            ProgressBar::new(options.maximum_iterations as u64)
+                .with_style(running_style),
+        );
 
-        Ok(Self { progress_bar })
+        Ok(Self {
+            progress_bar,
+            run_type,
+        })
     }
 
     pub fn start(&self) {
@@ -109,8 +123,6 @@ impl FireflySingleRunProgressBar {
 
     pub fn finish(
         &self,
-        run_number: usize,
-        total_runs: usize,
         iterations_performed: usize,
         minimum_value: f64,
         global_minimum: f64,
@@ -120,15 +132,49 @@ impl FireflySingleRunProgressBar {
             ProgressStyle::with_template("{msg}").into_diagnostic()?;
         self.progress_bar.set_style(finished_style);
 
-        self.progress_bar.finish_with_message(format!(
-            "[run {}/{}]  {}/{:04} iterations | minimum: {:.5}, distance: {:.5}",
-            run_number,
-            total_runs,
-            iterations_performed,
-            options.maximum_iterations,
-            minimum_value,
-            minimum_value - global_minimum
-        ));
+        let final_message = match self.run_type {
+            OptimizationRunType::Exploration {
+                run_number,
+                total_runs,
+            } => {
+                format!(
+                    "[ {} | run {}/{}]  {}/{:04} iterations | minimum: {:.5}, distance: {:.5}",
+                    "  explore  ".bright_yellow().bold(),
+                    run_number,
+                    total_runs,
+                    iterations_performed,
+                    options.maximum_iterations,
+                    minimum_value,
+                    minimum_value - global_minimum
+                )
+            }
+            OptimizationRunType::Refinement {
+                run_number,
+                total_runs,
+                best_value_before_refinement,
+            } => {
+                let updated_minimum_str =
+                    if minimum_value < best_value_before_refinement {
+                        format!("-> {:.5}", minimum_value).bright_green()
+                    } else {
+                        format!("-> {:.5}", minimum_value).yellow()
+                    };
+
+                format!(
+                    "[ {} | run {}/{}]  {}/{:04} iterations | minimum: {:.5} {}, distance: {:.5}",
+                    "refine best".bright_cyan().bold(),
+                    run_number,
+                    total_runs,
+                    iterations_performed,
+                    options.maximum_iterations,
+                    best_value_before_refinement,
+                    updated_minimum_str,
+                    minimum_value - global_minimum
+                )
+            }
+        };
+
+        self.progress_bar.finish_with_message(final_message);
 
         self.progress_bar.disable_steady_tick();
         self.progress_bar.tick();

@@ -6,13 +6,15 @@ pub struct FullFireflyOptions {
     /// used in various parts of the firefly algorithm.
     pub random_generator_seed: [u8; 16],
 
-    /// Options per-restart of each
+    /// Options for each run.
     pub per_restart_options: Vec<FireflyRunOptions>,
+
+    pub post_process_best_options: Option<FireflyRunOptions>,
 }
 
 /// References:
 ///  - [1: Firefly Algorithm: Recent Advances and Applications](https://arxiv.org/abs/1308.3898)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct FireflyRunOptions {
     /// Specified the amount of fireflies in the swarm. In FA, the swarm size is constant.
     /// According to [1], the optimal swarm size is between 15 to 100 (or 25 to 40).
@@ -235,14 +237,16 @@ fn generate_multiple_jitter_variants(
         // Low jitter variant:
         // - barely heats up at all,
         // - cools relatively quickly,
-        // - very patient.
+        // - very patient and a lot of iterations.
         FireflyRunOptions {
+            swarm_size: 50,
+            maximum_iterations: run_options.maximum_iterations * 10,
             consider_stuck_after_n_iterations: 2000,
             movement_jitter_starting_coefficient: 0.005,
-            movement_jitter_cooling_factor: 0.97,
+            movement_jitter_cooling_factor: 0.996,
             movement_jitter_min_stuck_runs_to_reheat: 800,
             movement_jitter_heating_factor: 1.0001,
-            movement_jitter_minimum_coefficient: 0.0002,
+            movement_jitter_minimum_coefficient: 0.0004,
             movement_jitter_maximum_coefficient: 0.01,
             ..run_options
         },
@@ -260,9 +264,9 @@ pub fn get_optimized_hyperparameters(
         68, 0, 111, 49, 202, 129, 188, 17, 242, 111, 237, 175, 192, 39, 186, 157,
     ];
 
-    let base_run_options = FireflyRunOptions {
+    let base_run = FireflyRunOptions {
         swarm_size: 80,
-        maximum_iterations: 15000,
+        maximum_iterations: 20000,
         consider_stuck_after_n_iterations: 500,
         attractiveness_coefficient: 1f64,
         light_absorption_coefficient: 0.02,
@@ -274,15 +278,33 @@ pub fn get_optimized_hyperparameters(
         movement_jitter_maximum_coefficient: 0.115,
     };
 
-    let with_jitter_variants = |run_base| FullFireflyOptions {
-        random_generator_seed: DEFAULT_RNG_SEED,
-        per_restart_options: generate_multiple_jitter_variants(run_base),
+    let base_postprocessing_run = FireflyRunOptions {
+        swarm_size: 100,
+        maximum_iterations: 20000,
+        consider_stuck_after_n_iterations: 2500,
+        attractiveness_coefficient: 1f64,
+        light_absorption_coefficient: 0.02,
+        movement_jitter_starting_coefficient: 0.005,
+        movement_jitter_cooling_factor: 0.996,
+        movement_jitter_min_stuck_runs_to_reheat: 800,
+        movement_jitter_heating_factor: 1.0001,
+        movement_jitter_minimum_coefficient: 0.0002,
+        movement_jitter_maximum_coefficient: 0.01,
     };
+
+    let with_jitter_variants =
+        |run_base, postprocessing_base| FullFireflyOptions {
+            random_generator_seed: DEFAULT_RNG_SEED,
+            per_restart_options: generate_multiple_jitter_variants(run_base),
+            post_process_best_options: Some(postprocessing_base),
+        };
+
+    let full_defaults = with_jitter_variants(base_run, base_postprocessing_run);
 
     match problem {
         // <status> (delta=<distance to minimum>)
         // OK (delta=0.00006)
-        BBOBFunctionType::Sphere => with_jitter_variants(base_run_options),
+        BBOBFunctionType::Sphere => full_defaults,
         // NOT OK (delta=603.90328)
         BBOBFunctionType::SeparableEllipsoidal => FullFireflyOptions {
             random_generator_seed: DEFAULT_RNG_SEED,
@@ -301,79 +323,51 @@ pub fn get_optimized_hyperparameters(
                     movement_jitter_maximum_coefficient: 0.115,
                 },
             ),
+            post_process_best_options: Some(base_postprocessing_run),
         },
         // NOT OK (delta=516.37685)
-        BBOBFunctionType::Rastrigin => with_jitter_variants(
-            base_run_options
-                .with_swarm_size(50)
-                .with_maximum_iterations(10000)
-                .with_consider_stuck_after_runs(1000)
-                .with_movement_jitter_min_stuck_runs_to_reheat(150)
-                .with_light_absorption_coefficient(0.009),
-        ),
+        BBOBFunctionType::Rastrigin => full_defaults,
         // NOT OK (delta=659.69163)
-        BBOBFunctionType::BucheRastrigin => {
-            with_jitter_variants(base_run_options)
-        }
+        BBOBFunctionType::BucheRastrigin => full_defaults,
         // ALMOST OK (delta=6.64265)
-        BBOBFunctionType::LinearSlope => with_jitter_variants(base_run_options),
+        BBOBFunctionType::LinearSlope => full_defaults,
         // OK (delta=0.00251)
-        BBOBFunctionType::AttractiveSector => {
-            with_jitter_variants(base_run_options)
-        }
+        BBOBFunctionType::AttractiveSector => full_defaults,
         // ALMOST OK (delta=11.45838)
-        BBOBFunctionType::StepEllipsoidal => {
-            with_jitter_variants(base_run_options)
-        }
+        BBOBFunctionType::StepEllipsoidal => full_defaults,
         // OK (delta=0.70861)
-        BBOBFunctionType::RosenbrockFunction => {
-            with_jitter_variants(base_run_options)
-        }
+        BBOBFunctionType::RosenbrockFunction => full_defaults,
         // OK (delta=0.58336)
-        BBOBFunctionType::RosenbrockFunctionRotated => {
-            with_jitter_variants(base_run_options)
-        }
+        BBOBFunctionType::RosenbrockFunctionRotated => full_defaults,
         // NOT OK (delta=192.53581)
-        BBOBFunctionType::Ellipsoidal => with_jitter_variants(base_run_options),
+        BBOBFunctionType::Ellipsoidal => full_defaults,
         // OK (delta=0.00014)
-        BBOBFunctionType::Discus => with_jitter_variants(base_run_options),
+        BBOBFunctionType::Discus => full_defaults,
         // NOT OK (delta=42.96076)
-        BBOBFunctionType::BentCigar => with_jitter_variants(base_run_options),
+        BBOBFunctionType::BentCigar => full_defaults,
         // ALMOST OK (delta=1.24980)
-        BBOBFunctionType::SharpRidge => with_jitter_variants(base_run_options),
+        BBOBFunctionType::SharpRidge => full_defaults,
         // OK (delta=0.00068)
-        BBOBFunctionType::DifferentPowers => {
-            with_jitter_variants(base_run_options)
-        }
+        BBOBFunctionType::DifferentPowers => full_defaults,
         // NOT OK (delta=281.03887)
         // Heating helps a lot here.
-        BBOBFunctionType::RastriginMultiModal => {
-            with_jitter_variants(base_run_options)
-        }
+        BBOBFunctionType::RastriginMultiModal => full_defaults,
         // ALMOST OK (delta=9.48454)
-        BBOBFunctionType::Weierstrass => with_jitter_variants(base_run_options),
+        BBOBFunctionType::Weierstrass => full_defaults,
         // ALMOST OK (delta=6.36824)
-        BBOBFunctionType::SchafferF7 => with_jitter_variants(base_run_options),
+        BBOBFunctionType::SchafferF7 => full_defaults,
         // ALMOST OK (delta=6.75608)
-        BBOBFunctionType::SchafferF7IllConditioned => {
-            with_jitter_variants(base_run_options)
-        }
+        BBOBFunctionType::SchafferF7IllConditioned => full_defaults,
         // ALMOST OK (delta=2.22957)
-        BBOBFunctionType::CompositeGriewankRosenbrockF8F2 => {
-            with_jitter_variants(base_run_options)
-        }
+        BBOBFunctionType::CompositeGriewankRosenbrockF8F2 => full_defaults,
         // ALMOST OK (delta=2.27812)
-        BBOBFunctionType::Schwefel => with_jitter_variants(base_run_options),
+        BBOBFunctionType::Schwefel => full_defaults,
         // ALMOST OK (delta=1.93775)
-        BBOBFunctionType::GallagherGaussian101MePeaks => {
-            with_jitter_variants(base_run_options)
-        }
+        BBOBFunctionType::GallagherGaussian101MePeaks => full_defaults,
         // ALMOST OK (delta=2.59057)
-        BBOBFunctionType::GallagherGaussian21HiPeaks => {
-            with_jitter_variants(base_run_options)
-        }
+        BBOBFunctionType::GallagherGaussian21HiPeaks => full_defaults,
         // OK (delta=0.40514)
-        BBOBFunctionType::Katsuura => with_jitter_variants(base_run_options),
+        BBOBFunctionType::Katsuura => full_defaults,
         // NOT OK (delta=179.40182)
         BBOBFunctionType::LunacekBiRastrigin => FullFireflyOptions {
             random_generator_seed: DEFAULT_RNG_SEED,
@@ -390,6 +384,7 @@ pub fn get_optimized_hyperparameters(
                 movement_jitter_minimum_coefficient: 0.009,
                 movement_jitter_maximum_coefficient: 0.6,
             }],
+            post_process_best_options: Some(base_postprocessing_run),
         },
     }
 }

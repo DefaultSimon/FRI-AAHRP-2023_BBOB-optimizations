@@ -1,5 +1,3 @@
-use std::cmp::max;
-
 use crate::algorithms::common::rng::{
     UniformF64BoundedRandomGenerator,
     UniformU8RandomGenerator,
@@ -8,18 +6,6 @@ use crate::algorithms::firefly::individual_firefly::Firefly;
 use crate::algorithms::firefly::utilities::PointValue;
 use crate::algorithms::firefly::FireflyRunOptions;
 use crate::core::problem::{BBOBProblem, Bounds};
-
-pub struct IterationResult {
-    pub new_global_minimum: bool,
-}
-
-impl IterationResult {
-    #[inline]
-    pub fn new(new_global_minimum: bool) -> Self {
-        Self { new_global_minimum }
-    }
-}
-
 
 /// Entire firefly swarm.
 pub struct FireflySwarm<'p: 'pref, 'pref, 'options> {
@@ -42,7 +28,7 @@ pub struct FireflySwarm<'p: 'pref, 'pref, 'options> {
 
 impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
     // Initialize the swarm with the given `FireflyOptions`.
-    pub fn initialize(
+    pub fn initialize_random(
         mut problem: &'pref mut BBOBProblem<'p>,
         seed_generator: &mut UniformU8RandomGenerator,
         options: &'options FireflyRunOptions,
@@ -70,6 +56,40 @@ impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
 
                 Firefly::new(initial_position, &mut problem)
             })
+            .collect();
+
+        fireflies.sort_unstable_by(|first, second| {
+            second
+                .objective_function_value
+                .total_cmp(&first.objective_function_value)
+        });
+
+        Self {
+            problem,
+            minus_half_to_half_uniform_generator,
+            current_best_solution: None,
+            options,
+            fireflies,
+            current_movement_jitter_coefficient: options
+                .movement_jitter_starting_coefficient,
+            iterations_since_improvement: 0,
+        }
+    }
+
+    pub fn initialize_at_point(
+        mut problem: &'pref mut BBOBProblem<'p>,
+        seed_generator: &mut UniformU8RandomGenerator,
+        options: &'options FireflyRunOptions,
+        initial_point: Vec<f64>,
+    ) -> Self {
+        let minus_half_to_half_uniform_generator =
+            UniformF64BoundedRandomGenerator::new(
+                Bounds::new(-0.5f64, 0.5f64),
+                seed_generator.sample_multiple::<16>(),
+            );
+
+        let mut fireflies: Vec<Firefly> = (0..options.swarm_size)
+            .map(|_| Firefly::new(initial_point.clone(), &mut problem))
             .collect();
 
         fireflies.sort_unstable_by(|first, second| {

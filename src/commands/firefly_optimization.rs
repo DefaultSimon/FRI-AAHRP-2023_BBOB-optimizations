@@ -7,7 +7,7 @@ use miette::{miette, Result};
 
 use crate::algorithms::firefly::{
     get_optimized_hyperparameters,
-    perform_firefly_swarm_optimization,
+    run_firefly_swarm_optimization,
 };
 use crate::core::functions::{BBOBFunctionType, ALL_BBOB_FUNCTIONS};
 use crate::core::suite::BBOBSuite;
@@ -62,7 +62,7 @@ pub fn cmd_run_all_problems() -> Result<()> {
             bbob_function.global_minimum(),
         );
 
-        let optimization_results = perform_firefly_swarm_optimization(
+        let optimization_results = run_firefly_swarm_optimization(
             problem,
             optimized_hyperparameters.clone(),
         )?;
@@ -115,7 +115,6 @@ pub fn cmd_run_specific_problem(args: CLIRunOneArgs) -> Result<()> {
         bbob_function.name(),
         bbob_function.global_minimum(),
     );
-    println!();
 
     let problem_start_time = Instant::now();
 
@@ -126,7 +125,7 @@ pub fn cmd_run_specific_problem(args: CLIRunOneArgs) -> Result<()> {
     let problem = suite.problem(bbob_function)?;
 
     let optimization_results =
-        perform_firefly_swarm_optimization(problem, optimized_hyperparameters)?;
+        run_firefly_swarm_optimization(problem, optimized_hyperparameters)?;
 
     let problem_delta_time = problem_start_time.elapsed().as_secs_f64();
 
