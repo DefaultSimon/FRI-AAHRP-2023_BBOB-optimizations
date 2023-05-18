@@ -55,10 +55,11 @@ pub fn cmd_run_all_problems() -> Result<()> {
         let problem = suite.problem(bbob_function)?;
 
         println!(
-            "[Problem {:02}/{:02}: {}]",
+            "[[Problem {:02}/{:02} ({}) | global minimum is {:.4}]]",
             bbob_function.index(),
             ALL_BBOB_FUNCTIONS.len(),
             bbob_function.name(),
+            bbob_function.global_minimum(),
         );
 
         let optimization_results = perform_firefly_swarm_optimization(

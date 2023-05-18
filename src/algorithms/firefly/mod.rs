@@ -82,7 +82,7 @@ pub fn perform_firefly_swarm_optimization(
                 .with_message("INF"),
         );
 
-        progress_bar.enable_steady_tick(Duration::from_secs_f64(1f64 / 15f64));
+        progress_bar.enable_steady_tick(Duration::from_secs_f64(1f64 / 8f64));
 
 
         // Initialize swarm and run.
@@ -102,8 +102,10 @@ pub fn perform_firefly_swarm_optimization(
 
             progress_bar.set_position(iterations_performed as u64);
             progress_bar.set_message(format!(
-                "jitter={:.4}  value={:.6}",
+                "jitter={:.4} iterations_since_improvement={:04}/{}    value={:.6}",
                 swarm.current_movement_jitter_coefficient,
+                swarm.iterations_since_improvement,
+                run_options.consider_stuck_after_n_iterations,
                 swarm
                     .current_best_solution
                     .as_ref()
@@ -145,7 +147,7 @@ pub fn perform_firefly_swarm_optimization(
             run_options.maximum_iterations,
             swarm_solution_value,
         ));
-        // progress_bar.disable_steady_tick();
+        progress_bar.disable_steady_tick();
         progress_bar.tick();
     }
 

@@ -241,6 +241,9 @@ pub fn get_optimized_hyperparameters(
     const DEFAULT_RNG_SEED: [u8; 16] = [
         133, 66, 79, 177, 132, 191, 158, 217, 101, 170, 134, 109, 79, 56, 2, 31,
     ];
+    const RNG_SEED_1: [u8; 16] = [
+        68, 0, 111, 49, 202, 129, 188, 17, 242, 111, 237, 175, 192, 39, 186, 157,
+    ];
 
     let base_run_options = FireflyRunOptions {
         swarm_size: 80,
@@ -254,6 +257,11 @@ pub fn get_optimized_hyperparameters(
         movement_jitter_heating_factor: 1.01,
         movement_jitter_minimum_coefficient: 0.005,
         movement_jitter_maximum_coefficient: 0.115,
+    };
+
+    let with_alternate_seed = |base_options, seed| FullFireflyOptions {
+        random_generator_seed: seed,
+        ..base_options
     };
 
     let with_jitter_variants = |run_base| FullFireflyOptions {
@@ -316,10 +324,24 @@ pub fn get_optimized_hyperparameters(
         BBOBFunctionType::DifferentPowers => {
             with_jitter_variants(base_run_options)
         }
-        // NOT OK (delta=342.98268)
-        BBOBFunctionType::RastriginMultiModal => {
-            with_jitter_variants(base_run_options)
-        }
+        // NOT OK (delta=283.74213)
+        // Heating helps a lot here.
+        BBOBFunctionType::RastriginMultiModal => FullFireflyOptions {
+            random_generator_seed: DEFAULT_RNG_SEED,
+            per_restart_options: vec![FireflyRunOptions {
+                swarm_size: 150,
+                maximum_iterations: 15000,
+                consider_stuck_after_n_iterations: 500,
+                attractiveness_coefficient: 1f64,
+                light_absorption_coefficient: 0.0001,
+                movement_jitter_starting_coefficient: 0.22,
+                movement_jitter_cooling_factor: 0.9999,
+                movement_jitter_min_stuck_runs_to_reheat: 100,
+                movement_jitter_heating_factor: 1.15,
+                movement_jitter_minimum_coefficient: 0.06,
+                movement_jitter_maximum_coefficient: 0.8,
+            }],
+        },
         // ALMOST OK (delta=9.48454)
         BBOBFunctionType::Weierstrass => with_jitter_variants(base_run_options),
         // ALMOST OK (delta=6.36824)
