@@ -102,12 +102,13 @@ pub fn perform_firefly_swarm_optimization(
 
             progress_bar.set_position(iterations_performed as u64);
             progress_bar.set_message(format!(
-                "{:.5}",
+                "jitter={:.4}  value={:.6}",
+                swarm.current_movement_jitter_coefficient,
                 swarm
                     .current_best_solution
                     .as_ref()
                     .expect("BUG: Invalid swarm, no solution at all.")
-                    .value
+                    .value,
             ));
 
             // If stuck for `consider_stuck_after_runs` or more iterations, abort the run.

@@ -1,4 +1,3 @@
-use crate::algorithms::firefly::individual_firefly::Firefly;
 use crate::core::functions::BBOBFunctionType;
 
 #[derive(Debug, Clone)]
@@ -64,6 +63,7 @@ pub struct FireflyRunOptions {
     pub movement_jitter_maximum_coefficient: f64,
 }
 
+#[allow(dead_code)]
 impl FireflyRunOptions {
     pub fn with_swarm_size(self, swarm_size: usize) -> Self {
         Self { swarm_size, ..self }
@@ -116,6 +116,36 @@ impl FireflyRunOptions {
         }
     }
 
+    pub fn with_movement_jitter_cooling_factor(
+        self,
+        movement_jitter_cooling_factor: f64,
+    ) -> Self {
+        Self {
+            movement_jitter_cooling_factor,
+            ..self
+        }
+    }
+
+    pub fn with_movement_jitter_min_stuck_runs_to_reheat(
+        self,
+        movement_jitter_min_stuck_runs_to_reheat: usize,
+    ) -> Self {
+        Self {
+            movement_jitter_min_stuck_runs_to_reheat,
+            ..self
+        }
+    }
+
+    pub fn with_movement_jitter_heating_factor(
+        self,
+        movement_jitter_heating_factor: f64,
+    ) -> Self {
+        Self {
+            movement_jitter_heating_factor,
+            ..self
+        }
+    }
+
     pub fn with_movement_jitter_minimum_coefficient(
         self,
         movement_jitter_minimum_coefficient: f64,
@@ -126,12 +156,12 @@ impl FireflyRunOptions {
         }
     }
 
-    pub fn with_movement_jitter_cooling_factor(
+    pub fn with_movement_jitter_maximum_coefficient(
         self,
-        movement_jitter_cooling_factor: f64,
+        movement_jitter_maximum_coefficient: f64,
     ) -> Self {
         Self {
-            movement_jitter_cooling_factor,
+            movement_jitter_maximum_coefficient,
             ..self
         }
     }
@@ -161,14 +191,24 @@ fn generate_multiple_jitter_variants(
     vec![
         // Original untouched options.
         run_options.clone(),
-        // High jitter variant that heats up very quickly when stuck.
+        // Extremely high jitter variant that heats up very quickly when stuck and cools down very slowly.
         FireflyRunOptions {
-            movement_jitter_starting_coefficient: 0.5,
+            movement_jitter_starting_coefficient: 0.22,
             movement_jitter_cooling_factor: 0.9999,
-            movement_jitter_min_stuck_runs_to_reheat: 400,
-            movement_jitter_heating_factor: 1.1,
-            movement_jitter_minimum_coefficient: 0.08,
-            movement_jitter_maximum_coefficient: 0.6,
+            movement_jitter_min_stuck_runs_to_reheat: 100,
+            movement_jitter_heating_factor: 1.15,
+            movement_jitter_minimum_coefficient: 0.06,
+            movement_jitter_maximum_coefficient: 0.8,
+            ..run_options
+        },
+        // High jitter variant that heats up very quickly when stuck and cools down slowly.
+        FireflyRunOptions {
+            movement_jitter_starting_coefficient: 0.18,
+            movement_jitter_cooling_factor: 0.999,
+            movement_jitter_min_stuck_runs_to_reheat: 250,
+            movement_jitter_heating_factor: 1.15,
+            movement_jitter_minimum_coefficient: 0.06,
+            movement_jitter_maximum_coefficient: 0.4,
             ..run_options
         },
         // Medium jitter variant. Cools down slowly, heats up slowly.
@@ -204,13 +244,13 @@ pub fn get_optimized_hyperparameters(
 
     let base_run_options = FireflyRunOptions {
         swarm_size: 80,
-        maximum_iterations: 5000,
+        maximum_iterations: 15000,
         consider_stuck_after_n_iterations: 500,
         attractiveness_coefficient: 1f64,
         light_absorption_coefficient: 0.02,
         movement_jitter_starting_coefficient: 0.065,
         movement_jitter_cooling_factor: 0.985,
-        movement_jitter_min_stuck_runs_to_reheat: 500,
+        movement_jitter_min_stuck_runs_to_reheat: 300,
         movement_jitter_heating_factor: 1.01,
         movement_jitter_minimum_coefficient: 0.005,
         movement_jitter_maximum_coefficient: 0.115,
@@ -222,77 +262,89 @@ pub fn get_optimized_hyperparameters(
     };
 
     match problem {
-        // OK (delta=0.00005)
+        // <status> (delta=<distance to minimum>)
+        // OK (delta=0.00006)
         BBOBFunctionType::Sphere => with_jitter_variants(base_run_options),
-        // NOT OK
-        BBOBFunctionType::SeparableEllipsoidal => {
-            with_jitter_variants(base_run_options.with_maximum_iterations(10000))
-        }
-        // NOT OK
-        BBOBFunctionType::Rastrigin => with_jitter_variants(base_run_options),
-        // NOT OK
+        // NOT OK (delta=603.90328)
+        BBOBFunctionType::SeparableEllipsoidal => with_jitter_variants(
+            base_run_options
+                .with_swarm_size(40)
+                .with_maximum_iterations(20000)
+                .with_movement_jitter_minimum_coefficient(0.01)
+                .with_consider_stuck_after_runs(1500),
+        ),
+        // NOT OK (delta=516.37685)
+        BBOBFunctionType::Rastrigin => with_jitter_variants(
+            base_run_options
+                .with_swarm_size(50)
+                .with_maximum_iterations(10000)
+                .with_consider_stuck_after_runs(1000)
+                .with_movement_jitter_min_stuck_runs_to_reheat(150)
+                .with_light_absorption_coefficient(0.009),
+        ),
+        // NOT OK (delta=659.69163)
         BBOBFunctionType::BucheRastrigin => {
             with_jitter_variants(base_run_options)
         }
-        // NOT OK
+        // ALMOST OK (delta=6.64265)
         BBOBFunctionType::LinearSlope => with_jitter_variants(base_run_options),
-        // NOT OK
+        // OK (delta=0.00251)
         BBOBFunctionType::AttractiveSector => {
             with_jitter_variants(base_run_options)
         }
-        // NOT OK
+        // ALMOST OK (delta=11.45838)
         BBOBFunctionType::StepEllipsoidal => {
             with_jitter_variants(base_run_options)
         }
-        // NOT OK
+        // OK (delta=0.70861)
         BBOBFunctionType::RosenbrockFunction => {
             with_jitter_variants(base_run_options)
         }
-        // NEARLY THERE (delta=5.27988)
+        // OK (delta=0.58336)
         BBOBFunctionType::RosenbrockFunctionRotated => {
             with_jitter_variants(base_run_options)
         }
-        // NOT OK
+        // NOT OK (delta=192.53581)
         BBOBFunctionType::Ellipsoidal => with_jitter_variants(base_run_options),
-        // NEARLY THERE (delta=25.36596)
+        // OK (delta=0.00014)
         BBOBFunctionType::Discus => with_jitter_variants(base_run_options),
-        // NOT OK
+        // NOT OK (delta=42.96076)
         BBOBFunctionType::BentCigar => with_jitter_variants(base_run_options),
-        // NOT OK
+        // ALMOST OK (delta=1.24980)
         BBOBFunctionType::SharpRidge => with_jitter_variants(base_run_options),
-        // OK (delta=0.00107)
+        // OK (delta=0.00068)
         BBOBFunctionType::DifferentPowers => {
             with_jitter_variants(base_run_options)
         }
-        // NOT OK
+        // NOT OK (delta=342.98268)
         BBOBFunctionType::RastriginMultiModal => {
             with_jitter_variants(base_run_options)
         }
-        // NOT OK
+        // ALMOST OK (delta=9.48454)
         BBOBFunctionType::Weierstrass => with_jitter_variants(base_run_options),
-        // NOT OK
+        // ALMOST OK (delta=6.36824)
         BBOBFunctionType::SchafferF7 => with_jitter_variants(base_run_options),
-        // NOT OK
+        // ALMOST OK (delta=6.75608)
         BBOBFunctionType::SchafferF7IllConditioned => {
             with_jitter_variants(base_run_options)
         }
-        // NOT OK
+        // ALMOST OK (delta=2.22957)
         BBOBFunctionType::CompositeGriewankRosenbrockF8F2 => {
             with_jitter_variants(base_run_options)
         }
-        // NOT OK
+        // ALMOST OK (delta=2.27812)
         BBOBFunctionType::Schwefel => with_jitter_variants(base_run_options),
-        // NOT OK
+        // ALMOST OK (delta=1.93775)
         BBOBFunctionType::GallagherGaussian101MePeaks => {
             with_jitter_variants(base_run_options)
         }
-        // NOT OK
+        // ALMOST OK (delta=2.59057)
         BBOBFunctionType::GallagherGaussian21HiPeaks => {
             with_jitter_variants(base_run_options)
         }
-        // NOT OK
+        // OK (delta=0.40514)
         BBOBFunctionType::Katsuura => with_jitter_variants(base_run_options),
-        // NOT OK
+        // NOT OK (delta=190.74857)
         BBOBFunctionType::LunacekBiRastrigin => {
             with_jitter_variants(base_run_options)
         }
