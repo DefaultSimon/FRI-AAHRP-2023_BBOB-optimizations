@@ -1,3 +1,5 @@
+use std::cmp::max;
+
 use crate::algorithms::common::rng::{
     UniformF64BoundedRandomGenerator,
     UniformU8RandomGenerator,
@@ -27,13 +29,15 @@ pub struct FireflySwarm<'p: 'pref, 'pref, 'options> {
 
     options: &'options FireflyRunOptions,
 
-    /// Current best solution from all iterations up to this point.
-    pub best_solution: Option<PointValue>,
-
     /// Vector of fireflies - this is the swarm.
     fireflies: Vec<Firefly>,
 
-    current_movement_jitter_coefficient: f64,
+    /// Current best solution from all iterations up to this point.
+    pub current_best_solution: Option<PointValue>,
+
+    pub current_movement_jitter_coefficient: f64,
+
+    pub iterations_since_improvement: usize,
 }
 
 impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
@@ -77,18 +81,19 @@ impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
         Self {
             problem,
             minus_half_to_half_uniform_generator,
-            best_solution: None,
+            current_best_solution: None,
             options,
             fireflies,
             current_movement_jitter_coefficient: options
                 .movement_jitter_starting_coefficient,
+            iterations_since_improvement: 0,
         }
     }
 
     #[inline]
     fn is_better_than_minimum(&self, value: f64) -> bool {
-        self.best_solution.is_none()
-            || value < self.best_solution.as_ref().unwrap().value
+        self.current_best_solution.is_none()
+            || value < self.current_best_solution.as_ref().unwrap().value
     }
 
     #[inline]
@@ -97,13 +102,14 @@ impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
         value: f64,
         position: Vec<f64>,
     ) {
-        self.best_solution = Some(PointValue::new(position, value));
+        self.current_best_solution = Some(PointValue::new(position, value));
     }
 
-    pub fn perform_iteration(&mut self) -> IterationResult {
+    pub fn perform_iteration(&mut self) {
         assert_eq!(self.fireflies.len(), self.options.swarm_size);
 
-        let mut result = IterationResult::new(false);
+        // Whether a better (smaller) value than the current best has been found in this iteration.
+        let mut has_found_better = false;
 
         let mut new_firefly_swarm: Vec<Firefly> =
             Vec::with_capacity(self.fireflies.len());
@@ -145,7 +151,7 @@ impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
                     new_main_firefly.position.clone(),
                 );
 
-                result.new_global_minimum = true;
+                has_found_better = true;
             }
 
             new_firefly_swarm.push(new_main_firefly);
@@ -161,12 +167,27 @@ impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
 
         self.fireflies = new_firefly_swarm;
 
-        // Update the jitter coefficient by multiplying it by the cooling factor.
-        self.current_movement_jitter_coefficient = (self
-            .current_movement_jitter_coefficient
-            * self.options.movement_jitter_cooling_factor)
-            .max(self.options.movement_jitter_minimum_coefficient);
+        if has_found_better {
+            self.iterations_since_improvement = 0;
+        } else {
+            self.iterations_since_improvement += 1;
+        }
 
-        result
+        // Update the jitter coefficient by multiplying it by the cooling factor if
+        // the result is still or has recently improved.
+        // Otherwise, heat it back up by the reheating factor.
+        if self.iterations_since_improvement
+            < self.options.movement_jitter_min_stuck_runs_to_reheat
+        {
+            self.current_movement_jitter_coefficient = (self
+                .current_movement_jitter_coefficient
+                * self.options.movement_jitter_cooling_factor)
+                .max(self.options.movement_jitter_minimum_coefficient);
+        } else {
+            self.current_movement_jitter_coefficient = (self
+                .current_movement_jitter_coefficient
+                * self.options.movement_jitter_heating_factor)
+                .min(self.options.movement_jitter_maximum_coefficient);
+        }
     }
 }

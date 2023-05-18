@@ -1,3 +1,4 @@
+use crate::algorithms::firefly::individual_firefly::Firefly;
 use crate::core::functions::BBOBFunctionType;
 
 #[derive(Debug, Clone)]
@@ -23,7 +24,7 @@ pub struct FireflyRunOptions {
 
     /// How many consequent iterations of non-improvement to tolerate before aborting the run
     /// (we probably got stuck in a local minimum) and returning the current minimum.
-    pub consider_stuck_after_runs: usize,
+    pub consider_stuck_after_n_iterations: usize,
 
     /// Coefficient of attraction to brighter fireflies (`β_0` in the paper [1]).
     /// Generally in range [0, 1] (0 being essentially random swarm search).
@@ -35,16 +36,105 @@ pub struct FireflyRunOptions {
     pub light_absorption_coefficient: f64,
 
     /// To prevent getting stuck in local minimums, we add some jitter to firefly movements,
-    /// this coefficient controls how much. The value is generally around `0.01 * problemSize`.
+    /// this coefficient controls how much we start with.
+    /// A good starting value is generally around `0.01 * problem_size`.
     pub movement_jitter_starting_coefficient: f64,
-
-    /// Lower bound for the movement jitter coefficient.
-    pub movement_jitter_minimum_coefficient: f64,
 
     /// Cooling factor associated with the movement jitter coefficient.
     /// A value of `0.95` means the jitter decreases by that factor each iteration.
     /// A value of `1` effectively means no jitter decrease is applied.
     pub movement_jitter_cooling_factor: f64,
+
+    /// We generally cool the jitter coefficient down as the iterations progress,
+    /// but if we get stuck in a minimum we can't get out of (i.e. we're stuck for several iterations),
+    /// we might want to start heating the jitter back up to escape.
+    /// This parameter controls how many stuck iterations need to happen for the jitter to start heating up.
+    pub movement_jitter_min_stuck_runs_to_reheat: usize,
+
+    /// Heating factor associated with the movement jitter coefficient.
+    /// A value of `2` (which is absolutely too high) means the jitter will double.
+    pub movement_jitter_heating_factor: f64,
+
+    /// Lower bound for the movement jitter coefficient, meaning the cooling factor
+    /// cannot cool down the jitter more than this.
+    pub movement_jitter_minimum_coefficient: f64,
+
+    /// Upper bound for the movement jitter coefficient, meaning the heating factor
+    /// cannot heat the jitter more than this.
+    pub movement_jitter_maximum_coefficient: f64,
+}
+
+impl FireflyRunOptions {
+    pub fn with_swarm_size(self, swarm_size: usize) -> Self {
+        Self { swarm_size, ..self }
+    }
+
+    pub fn with_maximum_iterations(self, maximum_iterations: usize) -> Self {
+        Self {
+            maximum_iterations,
+            ..self
+        }
+    }
+
+    pub fn with_consider_stuck_after_runs(
+        self,
+        consider_stuck_after_runs: usize,
+    ) -> Self {
+        Self {
+            consider_stuck_after_n_iterations: consider_stuck_after_runs,
+            ..self
+        }
+    }
+
+    pub fn with_attractiveness_coefficient(
+        self,
+        attractiveness_coefficient: f64,
+    ) -> Self {
+        Self {
+            attractiveness_coefficient,
+            ..self
+        }
+    }
+
+    pub fn with_light_absorption_coefficient(
+        self,
+        light_absorption_coefficient: f64,
+    ) -> Self {
+        Self {
+            light_absorption_coefficient,
+            ..self
+        }
+    }
+
+    pub fn with_movement_jitter_starting_coefficient(
+        self,
+        movement_jitter_starting_coefficient: f64,
+    ) -> Self {
+        Self {
+            movement_jitter_starting_coefficient,
+            ..self
+        }
+    }
+
+    pub fn with_movement_jitter_minimum_coefficient(
+        self,
+        movement_jitter_minimum_coefficient: f64,
+    ) -> Self {
+        Self {
+            movement_jitter_minimum_coefficient,
+            ..self
+        }
+    }
+
+    pub fn with_movement_jitter_cooling_factor(
+        self,
+        movement_jitter_cooling_factor: f64,
+    ) -> Self {
+        Self {
+            movement_jitter_cooling_factor,
+            ..self
+        }
+    }
 }
 
 impl Default for FireflyRunOptions {
@@ -52,101 +142,159 @@ impl Default for FireflyRunOptions {
         Self {
             swarm_size: 150,
             maximum_iterations: 2000,
-            consider_stuck_after_runs: 500,
+            consider_stuck_after_n_iterations: 500,
             attractiveness_coefficient: 1f64,
             light_absorption_coefficient: 0.025,
             movement_jitter_starting_coefficient: 0.01,
-            movement_jitter_minimum_coefficient: 0.005,
             movement_jitter_cooling_factor: 0.99,
+            movement_jitter_min_stuck_runs_to_reheat: 200,
+            movement_jitter_heating_factor: 1.1,
+            movement_jitter_minimum_coefficient: 0.005,
+            movement_jitter_maximum_coefficient: 0.5,
         }
     }
+}
+
+fn generate_multiple_jitter_variants(
+    run_options: FireflyRunOptions,
+) -> Vec<FireflyRunOptions> {
+    vec![
+        // Original untouched options.
+        run_options.clone(),
+        // High jitter variant that heats up very quickly when stuck.
+        FireflyRunOptions {
+            movement_jitter_starting_coefficient: 0.5,
+            movement_jitter_cooling_factor: 0.9999,
+            movement_jitter_min_stuck_runs_to_reheat: 400,
+            movement_jitter_heating_factor: 1.1,
+            movement_jitter_minimum_coefficient: 0.08,
+            movement_jitter_maximum_coefficient: 0.6,
+            ..run_options
+        },
+        // Medium jitter variant. Cools down slowly, heats up slowly.
+        FireflyRunOptions {
+            movement_jitter_starting_coefficient: 0.1,
+            movement_jitter_cooling_factor: 0.99,
+            movement_jitter_min_stuck_runs_to_reheat: 400,
+            movement_jitter_heating_factor: 1.02,
+            movement_jitter_minimum_coefficient: 0.02,
+            movement_jitter_maximum_coefficient: 0.15,
+            ..run_options
+        },
+        // Low jitter variant, cools relatively quickly, barely heats up.
+        FireflyRunOptions {
+            movement_jitter_starting_coefficient: 0.005,
+            movement_jitter_cooling_factor: 0.97,
+            movement_jitter_min_stuck_runs_to_reheat: 800,
+            movement_jitter_heating_factor: 1.005,
+            movement_jitter_minimum_coefficient: 0.0002,
+            movement_jitter_maximum_coefficient: 0.01,
+            ..run_options
+        },
+    ]
 }
 
 
 pub fn get_optimized_hyperparameters(
     problem: BBOBFunctionType,
 ) -> FullFireflyOptions {
-    let default_run_options = FireflyRunOptions {
+    const DEFAULT_RNG_SEED: [u8; 16] = [
+        133, 66, 79, 177, 132, 191, 158, 217, 101, 170, 134, 109, 79, 56, 2, 31,
+    ];
+
+    let base_run_options = FireflyRunOptions {
         swarm_size: 80,
-        maximum_iterations: 2000,
-        consider_stuck_after_runs: 500,
+        maximum_iterations: 5000,
+        consider_stuck_after_n_iterations: 500,
         attractiveness_coefficient: 1f64,
-        light_absorption_coefficient: 0.025,
-        movement_jitter_starting_coefficient: 0.1,
+        light_absorption_coefficient: 0.02,
+        movement_jitter_starting_coefficient: 0.065,
+        movement_jitter_cooling_factor: 0.985,
+        movement_jitter_min_stuck_runs_to_reheat: 500,
+        movement_jitter_heating_factor: 1.01,
         movement_jitter_minimum_coefficient: 0.005,
-        movement_jitter_cooling_factor: 0.98,
+        movement_jitter_maximum_coefficient: 0.115,
     };
 
-    let defaults = FullFireflyOptions {
-        random_generator_seed: [
-            133, 66, 79, 177, 132, 191, 158, 217, 101, 170, 134, 109, 79, 56, 2,
-            31,
-        ],
-        per_restart_options: vec![
-            default_run_options.clone(),
-            FireflyRunOptions {
-                movement_jitter_starting_coefficient: 0.5,
-                movement_jitter_minimum_coefficient: 0.08,
-                movement_jitter_cooling_factor: 0.9999,
-                ..default_run_options
-            },
-            FireflyRunOptions {
-                movement_jitter_starting_coefficient: 0.001,
-                movement_jitter_minimum_coefficient: 0.0001,
-                movement_jitter_cooling_factor: 0.95,
-                ..default_run_options
-            },
-        ],
+    let with_jitter_variants = |run_base| FullFireflyOptions {
+        random_generator_seed: DEFAULT_RNG_SEED,
+        per_restart_options: generate_multiple_jitter_variants(run_base),
     };
 
     match problem {
         // OK (delta=0.00005)
-        BBOBFunctionType::Sphere => defaults,
+        BBOBFunctionType::Sphere => with_jitter_variants(base_run_options),
         // NOT OK
-        BBOBFunctionType::SeparableEllipsoidal => defaults,
+        BBOBFunctionType::SeparableEllipsoidal => {
+            with_jitter_variants(base_run_options.with_maximum_iterations(10000))
+        }
         // NOT OK
-        BBOBFunctionType::Rastrigin => defaults,
+        BBOBFunctionType::Rastrigin => with_jitter_variants(base_run_options),
         // NOT OK
-        BBOBFunctionType::BucheRastrigin => defaults,
+        BBOBFunctionType::BucheRastrigin => {
+            with_jitter_variants(base_run_options)
+        }
         // NOT OK
-        BBOBFunctionType::LinearSlope => defaults,
+        BBOBFunctionType::LinearSlope => with_jitter_variants(base_run_options),
         // NOT OK
-        BBOBFunctionType::AttractiveSector => defaults,
+        BBOBFunctionType::AttractiveSector => {
+            with_jitter_variants(base_run_options)
+        }
         // NOT OK
-        BBOBFunctionType::StepEllipsoidal => defaults,
+        BBOBFunctionType::StepEllipsoidal => {
+            with_jitter_variants(base_run_options)
+        }
         // NOT OK
-        BBOBFunctionType::RosenbrockFunction => defaults,
+        BBOBFunctionType::RosenbrockFunction => {
+            with_jitter_variants(base_run_options)
+        }
         // NEARLY THERE (delta=5.27988)
-        BBOBFunctionType::RosenbrockFunctionRotated => defaults,
+        BBOBFunctionType::RosenbrockFunctionRotated => {
+            with_jitter_variants(base_run_options)
+        }
         // NOT OK
-        BBOBFunctionType::Ellipsoidal => defaults,
+        BBOBFunctionType::Ellipsoidal => with_jitter_variants(base_run_options),
         // NEARLY THERE (delta=25.36596)
-        BBOBFunctionType::Discus => defaults,
+        BBOBFunctionType::Discus => with_jitter_variants(base_run_options),
         // NOT OK
-        BBOBFunctionType::BentCigar => defaults,
+        BBOBFunctionType::BentCigar => with_jitter_variants(base_run_options),
         // NOT OK
-        BBOBFunctionType::SharpRidge => defaults,
+        BBOBFunctionType::SharpRidge => with_jitter_variants(base_run_options),
         // OK (delta=0.00107)
-        BBOBFunctionType::DifferentPowers => defaults,
+        BBOBFunctionType::DifferentPowers => {
+            with_jitter_variants(base_run_options)
+        }
         // NOT OK
-        BBOBFunctionType::RastriginMultiModal => defaults,
+        BBOBFunctionType::RastriginMultiModal => {
+            with_jitter_variants(base_run_options)
+        }
         // NOT OK
-        BBOBFunctionType::Weierstrass => defaults,
+        BBOBFunctionType::Weierstrass => with_jitter_variants(base_run_options),
         // NOT OK
-        BBOBFunctionType::SchafferF7 => defaults,
+        BBOBFunctionType::SchafferF7 => with_jitter_variants(base_run_options),
         // NOT OK
-        BBOBFunctionType::SchafferF7IllConditioned => defaults,
+        BBOBFunctionType::SchafferF7IllConditioned => {
+            with_jitter_variants(base_run_options)
+        }
         // NOT OK
-        BBOBFunctionType::CompositeGriewankRosenbrockF8F2 => defaults,
+        BBOBFunctionType::CompositeGriewankRosenbrockF8F2 => {
+            with_jitter_variants(base_run_options)
+        }
         // NOT OK
-        BBOBFunctionType::Schwefel => defaults,
+        BBOBFunctionType::Schwefel => with_jitter_variants(base_run_options),
         // NOT OK
-        BBOBFunctionType::GallagherGaussian101MePeaks => defaults,
+        BBOBFunctionType::GallagherGaussian101MePeaks => {
+            with_jitter_variants(base_run_options)
+        }
         // NOT OK
-        BBOBFunctionType::GallagherGaussian21HiPeaks => defaults,
+        BBOBFunctionType::GallagherGaussian21HiPeaks => {
+            with_jitter_variants(base_run_options)
+        }
         // NOT OK
-        BBOBFunctionType::Katsuura => defaults,
+        BBOBFunctionType::Katsuura => with_jitter_variants(base_run_options),
         // NOT OK
-        BBOBFunctionType::LunacekBiRastrigin => defaults,
+        BBOBFunctionType::LunacekBiRastrigin => {
+            with_jitter_variants(base_run_options)
+        }
     }
 }

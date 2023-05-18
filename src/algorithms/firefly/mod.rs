@@ -92,34 +92,27 @@ pub fn perform_firefly_swarm_optimization(
             run_options,
         );
 
-        let mut iterations_since_improvement: usize = 0;
         let mut iterations_performed: usize = 0;
 
         for _ in 0..run_options.maximum_iterations {
             iterations_performed += 1;
 
             // Perform a single iteration of the run.
-            let iteration_result = swarm.perform_iteration();
+            swarm.perform_iteration();
 
             progress_bar.set_position(iterations_performed as u64);
             progress_bar.set_message(format!(
                 "{:.5}",
                 swarm
-                    .best_solution
+                    .current_best_solution
                     .as_ref()
                     .expect("BUG: Invalid swarm, no solution at all.")
                     .value
             ));
 
-            // If reached stuck for `consider_stuck_after_runs`, abort the run.
-            if iteration_result.new_global_minimum {
-                iterations_since_improvement = 0;
-            } else {
-                iterations_since_improvement += 1;
-            }
-
-            if iterations_since_improvement
-                >= run_options.consider_stuck_after_runs
+            // If stuck for `consider_stuck_after_runs` or more iterations, abort the run.
+            if swarm.iterations_since_improvement
+                >= run_options.consider_stuck_after_n_iterations
             {
                 break;
             }
@@ -128,7 +121,7 @@ pub fn perform_firefly_swarm_optimization(
         iterations_performed_per_restart.push(iterations_performed);
 
         let swarm_solution = swarm
-            .best_solution
+            .current_best_solution
             .expect("BUG: Invalid swarm, no solution!");
         let swarm_solution_value = swarm_solution.value;
 
