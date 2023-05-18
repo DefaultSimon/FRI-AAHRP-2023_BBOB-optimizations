@@ -1,7 +1,7 @@
 use coco_rs::{Suite, SuiteName};
 use miette::{miette, Result};
 
-use crate::core::functions::BBOBFunction;
+use crate::core::functions::BBOBFunctionType;
 use crate::core::problem::{BBOBProblem, Bounds};
 
 pub struct BBOBSuite {
@@ -22,8 +22,7 @@ impl BBOBSuite {
 
     pub fn problem(
         &mut self,
-        bbob_function: BBOBFunction,
-        bounds: Option<Bounds>,
+        bbob_function: BBOBFunctionType,
     ) -> Result<BBOBProblem> {
         let raw_problem = self
             .suite
@@ -34,8 +33,10 @@ impl BBOBSuite {
             )
             .ok_or_else(|| miette!("Could not get BBOX problem!"))?;
 
-        let bounds = bounds.unwrap_or_else(|| Bounds::new(-5f64, 5f64));
-
-        BBOBProblem::from_problem_and_name(raw_problem, bbob_function, bounds)
+        BBOBProblem::from_problem_and_name(
+            raw_problem,
+            bbob_function,
+            Bounds::new(-5f64, 5f64),
+        )
     }
 }

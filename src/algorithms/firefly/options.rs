@@ -1,27 +1,13 @@
+use crate::core::functions::BBOBFunctionType;
+
 #[derive(Debug, Clone)]
 pub struct FullFireflyOptions {
     /// Main random generator seed. This is used to generate other seeds
     /// used in various parts of the firefly algorithm.
     pub random_generator_seed: [u8; 16],
 
-    /// How many restarts to do in one full firefly optimization.
-    pub restart_count: usize,
-
-    /// Run-specific options, like the iteration count and the swarm size.
-    pub run_options: FireflyRunOptions,
-}
-
-impl Default for FullFireflyOptions {
-    fn default() -> Self {
-        Self {
-            random_generator_seed: [
-                133, 66, 79, 177, 132, 191, 158, 217, 101, 170, 134, 109, 79,
-                56, 2, 31,
-            ],
-            restart_count: 4,
-            run_options: FireflyRunOptions::default(),
-        }
-    }
+    /// Options per-restart of each
+    pub per_restart_options: Vec<FireflyRunOptions>,
 }
 
 /// References:
@@ -73,5 +59,94 @@ impl Default for FireflyRunOptions {
             movement_jitter_minimum_coefficient: 0.005,
             movement_jitter_cooling_factor: 0.99,
         }
+    }
+}
+
+
+pub fn get_optimized_hyperparameters(
+    problem: BBOBFunctionType,
+) -> FullFireflyOptions {
+    let default_run_options = FireflyRunOptions {
+        swarm_size: 80,
+        maximum_iterations: 2000,
+        consider_stuck_after_runs: 500,
+        attractiveness_coefficient: 1f64,
+        light_absorption_coefficient: 0.025,
+        movement_jitter_starting_coefficient: 0.1,
+        movement_jitter_minimum_coefficient: 0.005,
+        movement_jitter_cooling_factor: 0.98,
+    };
+
+    let defaults = FullFireflyOptions {
+        random_generator_seed: [
+            133, 66, 79, 177, 132, 191, 158, 217, 101, 170, 134, 109, 79, 56, 2,
+            31,
+        ],
+        per_restart_options: vec![
+            default_run_options.clone(),
+            FireflyRunOptions {
+                movement_jitter_starting_coefficient: 0.5,
+                movement_jitter_minimum_coefficient: 0.08,
+                movement_jitter_cooling_factor: 0.9999,
+                ..default_run_options
+            },
+            FireflyRunOptions {
+                movement_jitter_starting_coefficient: 0.001,
+                movement_jitter_minimum_coefficient: 0.0001,
+                movement_jitter_cooling_factor: 0.95,
+                ..default_run_options
+            },
+        ],
+    };
+
+    match problem {
+        // OK (delta=0.00005)
+        BBOBFunctionType::Sphere => defaults,
+        // NOT OK
+        BBOBFunctionType::SeparableEllipsoidal => defaults,
+        // NOT OK
+        BBOBFunctionType::Rastrigin => defaults,
+        // NOT OK
+        BBOBFunctionType::BucheRastrigin => defaults,
+        // NOT OK
+        BBOBFunctionType::LinearSlope => defaults,
+        // NOT OK
+        BBOBFunctionType::AttractiveSector => defaults,
+        // NOT OK
+        BBOBFunctionType::StepEllipsoidal => defaults,
+        // NOT OK
+        BBOBFunctionType::RosenbrockFunction => defaults,
+        // NEARLY THERE (delta=5.27988)
+        BBOBFunctionType::RosenbrockFunctionRotated => defaults,
+        // NOT OK
+        BBOBFunctionType::Ellipsoidal => defaults,
+        // NEARLY THERE (delta=25.36596)
+        BBOBFunctionType::Discus => defaults,
+        // NOT OK
+        BBOBFunctionType::BentCigar => defaults,
+        // NOT OK
+        BBOBFunctionType::SharpRidge => defaults,
+        // OK (delta=0.00107)
+        BBOBFunctionType::DifferentPowers => defaults,
+        // NOT OK
+        BBOBFunctionType::RastriginMultiModal => defaults,
+        // NOT OK
+        BBOBFunctionType::Weierstrass => defaults,
+        // NOT OK
+        BBOBFunctionType::SchafferF7 => defaults,
+        // NOT OK
+        BBOBFunctionType::SchafferF7IllConditioned => defaults,
+        // NOT OK
+        BBOBFunctionType::CompositeGriewankRosenbrockF8F2 => defaults,
+        // NOT OK
+        BBOBFunctionType::Schwefel => defaults,
+        // NOT OK
+        BBOBFunctionType::GallagherGaussian101MePeaks => defaults,
+        // NOT OK
+        BBOBFunctionType::GallagherGaussian21HiPeaks => defaults,
+        // NOT OK
+        BBOBFunctionType::Katsuura => defaults,
+        // NOT OK
+        BBOBFunctionType::LunacekBiRastrigin => defaults,
     }
 }

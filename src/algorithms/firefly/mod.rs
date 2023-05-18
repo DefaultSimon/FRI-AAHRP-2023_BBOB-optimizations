@@ -7,7 +7,11 @@ use crate::core::problem::BBOBProblem;
 
 mod individual_firefly;
 mod options;
-pub use options::{FireflyRunOptions, FullFireflyOptions};
+pub use options::{
+    get_optimized_hyperparameters,
+    FireflyRunOptions,
+    FullFireflyOptions,
+};
 use swarm::FireflySwarm;
 
 use crate::algorithms::common::rng::UniformU8RandomGenerator;
@@ -58,20 +62,22 @@ pub fn perform_firefly_swarm_optimization(
 
     let mut best_solution: Option<PointValue> = None;
     let mut iterations_performed_per_restart: Vec<usize> =
-        Vec::with_capacity(options.restart_count);
+        Vec::with_capacity(options.per_restart_options.len());
 
     // Perform `restart_count` independent runs (restarts).
-    for run_index in 0..options.restart_count {
+    for (run_index, run_options) in
+        options.per_restart_options.iter().enumerate()
+    {
         // Set up progress bar.
         let progress_bar_style_running = ProgressStyle::with_template(&format!(
             "[run {}/{}]  {{bar:40}} {{pos}}/{{len}} (ETA {{eta}}): {{msg}}",
             run_index + 1,
-            options.restart_count,
+            options.per_restart_options.len(),
         ))
         .into_diagnostic()?;
 
         let progress_bar = multi_progress_bar.add(
-            ProgressBar::new(options.run_options.maximum_iterations as u64)
+            ProgressBar::new(run_options.maximum_iterations as u64)
                 .with_style(progress_bar_style_running.clone())
                 .with_message("INF"),
         );
@@ -83,13 +89,13 @@ pub fn perform_firefly_swarm_optimization(
         let mut swarm = FireflySwarm::initialize(
             &mut problem,
             &mut seed_generator,
-            &options.run_options,
+            run_options,
         );
 
         let mut iterations_since_improvement: usize = 0;
         let mut iterations_performed: usize = 0;
 
-        for _ in 0..options.run_options.maximum_iterations {
+        for _ in 0..run_options.maximum_iterations {
             iterations_performed += 1;
 
             // Perform a single iteration of the run.
@@ -113,7 +119,7 @@ pub fn perform_firefly_swarm_optimization(
             }
 
             if iterations_since_improvement
-                >= options.run_options.consider_stuck_after_runs
+                >= run_options.consider_stuck_after_runs
             {
                 break;
             }
@@ -140,9 +146,9 @@ pub fn perform_firefly_swarm_optimization(
         progress_bar.finish_with_message(format!(
             "[run {}/{}]  {}/{:04} iterations, minimum: {:.5}",
             run_index + 1,
-            options.restart_count,
+            options.per_restart_options.len(),
             iterations_performed,
-            options.run_options.maximum_iterations,
+            run_options.maximum_iterations,
             swarm_solution_value,
         ));
         // progress_bar.disable_steady_tick();

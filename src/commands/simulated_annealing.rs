@@ -17,7 +17,7 @@ pub fn run_cmd_simulated_annealing() -> Result<()> {
 
     // Run all 24 BBOB problems.
     for bbob_function in ALL_BBOB_FUNCTIONS {
-        let problem = suite.problem(bbob_function, None)?;
+        let problem = suite.problem(bbob_function)?;
         let problem_start_time = Instant::now();
 
         let results = run_sa(problem, run_options)?;
