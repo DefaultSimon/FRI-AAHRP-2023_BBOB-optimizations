@@ -60,7 +60,7 @@ impl FireflySingleRunProgressBar {
 
     pub fn start(&self) {
         self.progress_bar
-            .enable_steady_tick(Duration::from_secs_f64(1f64 / 8f64));
+            .enable_steady_tick(Duration::from_secs_f64(1f64 / 5f64));
     }
 
     pub fn update(
@@ -75,9 +75,14 @@ impl FireflySingleRunProgressBar {
             "jitter={:.4}",
             swarm.current_movement_jitter_coefficient,
         );
+        let iterations_since_improvement_str = format!(
+            "iterations_since_improvement={:04}/{}",
+            swarm.iterations_since_improvement,
+            options.consider_stuck_after_n_iterations,
+        );
 
         self.progress_bar.set_message(format!(
-            "{} iterations_since_improvement={:04}/{} value={:.6}",
+            "{} {} value={:.6}",
             // Colour the jitter value red when heating up and green when cooling down.
             if swarm.iterations_since_improvement
                 > options.movement_jitter_min_stuck_runs_to_reheat
@@ -86,8 +91,14 @@ impl FireflySingleRunProgressBar {
             } else {
                 jitter_str.bright_green()
             },
-            swarm.iterations_since_improvement,
-            options.consider_stuck_after_n_iterations,
+            // Colour the stuck iteration count red when at 80%+ of run abort condition.
+            if swarm.iterations_since_improvement as f32
+                > (options.consider_stuck_after_n_iterations as f32 * 0.8)
+            {
+                iterations_since_improvement_str.red()
+            } else {
+                iterations_since_improvement_str.white()
+            },
             swarm
                 .current_best_solution
                 .as_ref()

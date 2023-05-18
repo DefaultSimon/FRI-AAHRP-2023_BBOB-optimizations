@@ -191,42 +191,57 @@ fn generate_multiple_jitter_variants(
     vec![
         // Original untouched options.
         run_options.clone(),
-        // Extremely high jitter variant that heats up very quickly when stuck and cools down very slowly.
+        // Extremely high jitter variant:
+        // - heats up very quickly early on when stuck and covers a very wide range when fully stuck,
+        // - cools down very slowly,
+        // - very patient as searching a wide area on high jitter might take quite a few iterations.
         FireflyRunOptions {
-            movement_jitter_starting_coefficient: 0.22,
+            consider_stuck_after_n_iterations: 2000,
+            movement_jitter_starting_coefficient: 0.3,
             movement_jitter_cooling_factor: 0.9999,
-            movement_jitter_min_stuck_runs_to_reheat: 100,
-            movement_jitter_heating_factor: 1.15,
+            movement_jitter_min_stuck_runs_to_reheat: 120,
+            movement_jitter_heating_factor: 1.05,
             movement_jitter_minimum_coefficient: 0.06,
-            movement_jitter_maximum_coefficient: 0.8,
+            movement_jitter_maximum_coefficient: 8.0,
             ..run_options
         },
-        // High jitter variant that heats up very quickly when stuck and cools down slowly.
+        // High jitter variant:
+        // - heats up relatively quickly when stuck for a while, but searches a medium range,
+        // - cools down slowly.
         FireflyRunOptions {
+            consider_stuck_after_n_iterations: 1000,
             movement_jitter_starting_coefficient: 0.18,
             movement_jitter_cooling_factor: 0.999,
             movement_jitter_min_stuck_runs_to_reheat: 250,
-            movement_jitter_heating_factor: 1.15,
-            movement_jitter_minimum_coefficient: 0.06,
-            movement_jitter_maximum_coefficient: 0.4,
+            movement_jitter_heating_factor: 1.01,
+            movement_jitter_minimum_coefficient: 0.05,
+            movement_jitter_maximum_coefficient: 0.6,
             ..run_options
         },
-        // Medium jitter variant. Cools down slowly, heats up slowly.
+        // Medium jitter variant:
+        // - heats up slowly and not much, even when stuck for a long time
+        //   (hoping to hit a better point locally by luck),
+        // - cools down slowly.
         FireflyRunOptions {
+            consider_stuck_after_n_iterations: 1000,
             movement_jitter_starting_coefficient: 0.1,
-            movement_jitter_cooling_factor: 0.99,
+            movement_jitter_cooling_factor: 0.9995,
             movement_jitter_min_stuck_runs_to_reheat: 400,
             movement_jitter_heating_factor: 1.02,
             movement_jitter_minimum_coefficient: 0.02,
             movement_jitter_maximum_coefficient: 0.15,
             ..run_options
         },
-        // Low jitter variant, cools relatively quickly, barely heats up.
+        // Low jitter variant:
+        // - barely heats up at all,
+        // - cools relatively quickly,
+        // - very patient.
         FireflyRunOptions {
+            consider_stuck_after_n_iterations: 2000,
             movement_jitter_starting_coefficient: 0.005,
             movement_jitter_cooling_factor: 0.97,
             movement_jitter_min_stuck_runs_to_reheat: 800,
-            movement_jitter_heating_factor: 1.005,
+            movement_jitter_heating_factor: 1.0001,
             movement_jitter_minimum_coefficient: 0.0002,
             movement_jitter_maximum_coefficient: 0.01,
             ..run_options
@@ -259,11 +274,6 @@ pub fn get_optimized_hyperparameters(
         movement_jitter_maximum_coefficient: 0.115,
     };
 
-    let with_alternate_seed = |base_options, seed| FullFireflyOptions {
-        random_generator_seed: seed,
-        ..base_options
-    };
-
     let with_jitter_variants = |run_base| FullFireflyOptions {
         random_generator_seed: DEFAULT_RNG_SEED,
         per_restart_options: generate_multiple_jitter_variants(run_base),
@@ -274,13 +284,24 @@ pub fn get_optimized_hyperparameters(
         // OK (delta=0.00006)
         BBOBFunctionType::Sphere => with_jitter_variants(base_run_options),
         // NOT OK (delta=603.90328)
-        BBOBFunctionType::SeparableEllipsoidal => with_jitter_variants(
-            base_run_options
-                .with_swarm_size(40)
-                .with_maximum_iterations(20000)
-                .with_movement_jitter_minimum_coefficient(0.01)
-                .with_consider_stuck_after_runs(1500),
-        ),
+        BBOBFunctionType::SeparableEllipsoidal => FullFireflyOptions {
+            random_generator_seed: DEFAULT_RNG_SEED,
+            per_restart_options: generate_multiple_jitter_variants(
+                FireflyRunOptions {
+                    swarm_size: 40,
+                    maximum_iterations: 20000,
+                    consider_stuck_after_n_iterations: 1500,
+                    attractiveness_coefficient: 1f64,
+                    light_absorption_coefficient: 0.02,
+                    movement_jitter_starting_coefficient: 0.065,
+                    movement_jitter_cooling_factor: 0.985,
+                    movement_jitter_min_stuck_runs_to_reheat: 300,
+                    movement_jitter_heating_factor: 1.01,
+                    movement_jitter_minimum_coefficient: 0.01,
+                    movement_jitter_maximum_coefficient: 0.115,
+                },
+            ),
+        },
         // NOT OK (delta=516.37685)
         BBOBFunctionType::Rastrigin => with_jitter_variants(
             base_run_options
@@ -326,22 +347,9 @@ pub fn get_optimized_hyperparameters(
         }
         // NOT OK (delta=281.03887)
         // Heating helps a lot here.
-        BBOBFunctionType::RastriginMultiModal => FullFireflyOptions {
-            random_generator_seed: DEFAULT_RNG_SEED,
-            per_restart_options: vec![FireflyRunOptions {
-                swarm_size: 150,
-                maximum_iterations: 15000,
-                consider_stuck_after_n_iterations: 600,
-                attractiveness_coefficient: 1f64,
-                light_absorption_coefficient: 0.0001,
-                movement_jitter_starting_coefficient: 0.22,
-                movement_jitter_cooling_factor: 0.999,
-                movement_jitter_min_stuck_runs_to_reheat: 100,
-                movement_jitter_heating_factor: 1.02,
-                movement_jitter_minimum_coefficient: 0.06,
-                movement_jitter_maximum_coefficient: 0.8,
-            }],
-        },
+        BBOBFunctionType::RastriginMultiModal => {
+            with_jitter_variants(base_run_options)
+        }
         // ALMOST OK (delta=9.48454)
         BBOBFunctionType::Weierstrass => with_jitter_variants(base_run_options),
         // ALMOST OK (delta=6.36824)

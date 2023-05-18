@@ -53,8 +53,6 @@ pub fn perform_firefly_swarm_optimization(
 ) -> Result<FireflyOptimizationRunResult> {
     // Set up progress bar for this optimization run.
     let multi_progress_bar = FireflyOptimizationMultiProgressBar::new();
-    let progress_bar_style_finished =
-        ProgressStyle::with_template("{msg}").into_diagnostic()?;
 
     // TODO We could merge the firefly algorithm with the multi-swarm optimization strategy (multiple independent swarms)
     //      See https://en.wikipedia.org/wiki/Multi-swarm_optimization
