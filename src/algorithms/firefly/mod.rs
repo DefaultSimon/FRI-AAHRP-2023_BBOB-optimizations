@@ -146,10 +146,7 @@ pub fn run_firefly_swarm_optimization(
     //      See https://en.wikipedia.org/wiki/Multi-swarm_optimization
 
     // Parse options, initialize random generator and perform runs.
-    let mut total_runs = options.per_restart_options.len();
-    if options.post_process_best_options.is_some() {
-        total_runs += 1;
-    }
+    let mut total_restarts = options.per_restart_options.len();
 
     let mut seed_generator =
         UniformU8RandomGenerator::new(options.random_generator_seed);
@@ -169,7 +166,7 @@ pub fn run_firefly_swarm_optimization(
             &multi_progress_bar,
             OptimizationRunType::Exploration {
                 run_number: run_index + 1,
-                total_runs,
+                total_runs: total_restarts,
             },
         )?;
 
@@ -187,30 +184,39 @@ pub fn run_firefly_swarm_optimization(
     let best_solution =
         best_solution.expect("Invalid firefly optimization run: no solution!");
 
-    // If `post_process_best_options` is specified, perform one last run on the best solution,
+    // If `post_process_best_options` is specified, perform refinement runs on the best solution so far,
     // updating the previous best if we found something better.
     let final_optimization_solution: Minimum =
         if let Some(post_processing_options) = options.post_process_best_options
         {
-            let run_result =
-                do_one_firefly_optimization_run_with_starting_point(
-                    &mut problem,
-                    &post_processing_options,
-                    &mut seed_generator,
-                    &multi_progress_bar,
-                    best_solution.position.clone(),
-                    OptimizationRunType::Refinement {
-                        run_number: total_runs,
-                        total_runs,
-                        best_value_before_refinement: best_solution.value,
-                    },
-                )?;
+            let total_postprocessing_runs = post_processing_options.len();
+            let mut best_so_far = best_solution;
 
-            if run_result.minimum.value < best_solution.value {
-                run_result.minimum.into()
-            } else {
-                best_solution.into()
+            for (post_processing_run_index, post_processing_options) in
+                post_processing_options.into_iter().enumerate()
+            {
+                let run_result =
+                    do_one_firefly_optimization_run_with_starting_point(
+                        &mut problem,
+                        &post_processing_options,
+                        &mut seed_generator,
+                        &multi_progress_bar,
+                        best_so_far.position.clone(),
+                        OptimizationRunType::Refinement {
+                            run_number: total_restarts
+                                + post_processing_run_index
+                                + 1,
+                            total_runs: total_postprocessing_runs,
+                            best_value_before_refinement: best_so_far.value,
+                        },
+                    )?;
+
+                if run_result.minimum.value < best_so_far.value {
+                    best_so_far = run_result.minimum;
+                }
             }
+
+            best_so_far.into()
         } else {
             best_solution.into()
         };

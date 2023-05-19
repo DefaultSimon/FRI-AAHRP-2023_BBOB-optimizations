@@ -1,3 +1,7 @@
+use rand::distributions::{Distribution, Uniform};
+use rand::SeedableRng;
+use rand_pcg::{Mcg128Xsl64, Pcg64Mcg};
+
 use crate::core::functions::BBOBFunctionType;
 
 #[derive(Debug, Clone)]
@@ -9,7 +13,7 @@ pub struct FullFireflyOptions {
     /// Options for each run.
     pub per_restart_options: Vec<FireflyRunOptions>,
 
-    pub post_process_best_options: Option<FireflyRunOptions>,
+    pub post_process_best_options: Option<Vec<FireflyRunOptions>>,
 }
 
 /// References:
@@ -253,18 +257,99 @@ fn generate_multiple_jitter_variants(
     ]
 }
 
+const DEFAULT_RNG_SEED: [u8; 16] = [
+    133, 66, 79, 177, 132, 191, 158, 217, 101, 170, 134, 109, 79, 56, 2, 31,
+];
+const RNG_SEED_2: [u8; 16] = [
+    68, 0, 111, 49, 202, 129, 188, 17, 242, 111, 237, 175, 192, 39, 186, 157,
+];
+const RNG_SEED_3: [u8; 16] = [
+    91, 177, 196, 74, 108, 96, 138, 241, 113, 145, 26, 249, 86, 125, 133, 226,
+];
+const PREPROCESSING_RNG_SEED: [u8; 16] = [
+    54, 243, 8, 243, 25, 11, 26, 252, 39, 239, 143, 200, 60, 100, 193, 63,
+];
+
+fn mutate_each_option_as_duplicate(
+    runs: Vec<FireflyRunOptions>,
+    preprocessing_seed: [u8; 16],
+    mutation_range: Option<f64>,
+) -> Vec<FireflyRunOptions> {
+    let mutation_range = mutation_range.unwrap_or(0.05);
+
+    let mut preprocessing_random_generator =
+        Pcg64Mcg::from_seed(preprocessing_seed);
+    let uniform_distribution =
+        Uniform::new_inclusive(1f64 - mutation_range, 1f64 + mutation_range);
+
+    let mutate_f64 = |value: f64, rng: &mut Mcg128Xsl64| {
+        let coefficient = uniform_distribution.sample(rng);
+        coefficient * value
+    };
+    let mutate_usize = |value: usize, rng: &mut Mcg128Xsl64| {
+        let coefficient = uniform_distribution.sample(rng);
+        ((value as f64) * coefficient).round() as usize
+    };
+
+    let runs_cloned: Vec<FireflyRunOptions> = runs
+        .iter()
+        .cloned()
+        .map(|option| FireflyRunOptions {
+            swarm_size: mutate_usize(
+                option.swarm_size,
+                &mut preprocessing_random_generator,
+            ),
+            maximum_iterations: mutate_usize(
+                option.maximum_iterations,
+                &mut preprocessing_random_generator,
+            ),
+            consider_stuck_after_n_iterations: mutate_usize(
+                option.consider_stuck_after_n_iterations,
+                &mut preprocessing_random_generator,
+            ),
+            attractiveness_coefficient: mutate_f64(
+                option.attractiveness_coefficient,
+                &mut preprocessing_random_generator,
+            ),
+            light_absorption_coefficient: mutate_f64(
+                option.light_absorption_coefficient,
+                &mut preprocessing_random_generator,
+            ),
+            movement_jitter_starting_coefficient: mutate_f64(
+                option.movement_jitter_starting_coefficient,
+                &mut preprocessing_random_generator,
+            ),
+            movement_jitter_cooling_factor: mutate_f64(
+                option.movement_jitter_cooling_factor,
+                &mut preprocessing_random_generator,
+            ),
+            movement_jitter_min_stuck_runs_to_reheat: mutate_usize(
+                option.movement_jitter_min_stuck_runs_to_reheat,
+                &mut preprocessing_random_generator,
+            ),
+            movement_jitter_heating_factor: mutate_f64(
+                option.movement_jitter_heating_factor,
+                &mut preprocessing_random_generator,
+            ),
+            movement_jitter_minimum_coefficient: mutate_f64(
+                option.movement_jitter_minimum_coefficient,
+                &mut preprocessing_random_generator,
+            ),
+            movement_jitter_maximum_coefficient: mutate_f64(
+                option.movement_jitter_maximum_coefficient,
+                &mut preprocessing_random_generator,
+            ),
+        })
+        .collect();
+
+    runs.into_iter().chain(runs_cloned).collect()
+}
+
 
 pub fn get_optimized_hyperparameters(
     problem: BBOBFunctionType,
 ) -> FullFireflyOptions {
-    const DEFAULT_RNG_SEED: [u8; 16] = [
-        133, 66, 79, 177, 132, 191, 158, 217, 101, 170, 134, 109, 79, 56, 2, 31,
-    ];
-    const RNG_SEED_1: [u8; 16] = [
-        68, 0, 111, 49, 202, 129, 188, 17, 242, 111, 237, 175, 192, 39, 186, 157,
-    ];
-
-    let base_run = FireflyRunOptions {
+    let base_restart_run = FireflyRunOptions {
         swarm_size: 80,
         maximum_iterations: 20000,
         consider_stuck_after_n_iterations: 500,
@@ -278,7 +363,21 @@ pub fn get_optimized_hyperparameters(
         movement_jitter_maximum_coefficient: 0.115,
     };
 
-    let base_postprocessing_run = FireflyRunOptions {
+    let base_postprocessing_run_high_jitter = FireflyRunOptions {
+        swarm_size: 100,
+        maximum_iterations: 20000,
+        consider_stuck_after_n_iterations: 1000,
+        attractiveness_coefficient: 1f64,
+        light_absorption_coefficient: 0.02,
+        movement_jitter_starting_coefficient: 0.18,
+        movement_jitter_cooling_factor: 0.999,
+        movement_jitter_min_stuck_runs_to_reheat: 250,
+        movement_jitter_heating_factor: 1.01,
+        movement_jitter_minimum_coefficient: 0.05,
+        movement_jitter_maximum_coefficient: 0.6,
+    };
+
+    let base_postprocessing_run_low_jitter = FireflyRunOptions {
         swarm_size: 100,
         maximum_iterations: 20000,
         consider_stuck_after_n_iterations: 2500,
@@ -292,14 +391,18 @@ pub fn get_optimized_hyperparameters(
         movement_jitter_maximum_coefficient: 0.01,
     };
 
-    let with_jitter_variants =
-        |run_base, postprocessing_base| FullFireflyOptions {
-            random_generator_seed: DEFAULT_RNG_SEED,
-            per_restart_options: generate_multiple_jitter_variants(run_base),
-            post_process_best_options: Some(postprocessing_base),
-        };
-
-    let full_defaults = with_jitter_variants(base_run, base_postprocessing_run);
+    let full_defaults = FullFireflyOptions {
+        random_generator_seed: DEFAULT_RNG_SEED,
+        per_restart_options: mutate_each_option_as_duplicate(
+            generate_multiple_jitter_variants(base_restart_run),
+            PREPROCESSING_RNG_SEED,
+            Some(0.5),
+        ),
+        post_process_best_options: Some(vec![
+            base_postprocessing_run_high_jitter,
+            base_postprocessing_run_low_jitter,
+        ]),
+    };
 
     match problem {
         // <status> (delta=<distance to minimum>)
@@ -323,7 +426,10 @@ pub fn get_optimized_hyperparameters(
                     movement_jitter_maximum_coefficient: 0.115,
                 },
             ),
-            post_process_best_options: Some(base_postprocessing_run),
+            post_process_best_options: Some(vec![
+                base_postprocessing_run_high_jitter,
+                base_postprocessing_run_low_jitter,
+            ]),
         },
         // NOT OK (delta=516.37660)
         BBOBFunctionType::Rastrigin => full_defaults,
@@ -369,21 +475,29 @@ pub fn get_optimized_hyperparameters(
         // OK (delta=0.40514)
         BBOBFunctionType::Katsuura => full_defaults,
         // NOT OK (delta=182.19505)
-        BBOBFunctionType::LunacekBiRastrigin => with_jitter_variants(
-            FireflyRunOptions {
-                swarm_size: 150,
-                maximum_iterations: 10000,
-                consider_stuck_after_n_iterations: 800,
-                attractiveness_coefficient: 1f64,
-                light_absorption_coefficient: 0.001,
-                movement_jitter_starting_coefficient: 0.125,
-                movement_jitter_cooling_factor: 0.999,
-                movement_jitter_min_stuck_runs_to_reheat: 200,
-                movement_jitter_heating_factor: 1.008,
-                movement_jitter_minimum_coefficient: 0.009,
-                movement_jitter_maximum_coefficient: 0.6,
-            },
-            base_postprocessing_run,
-        ),
+        BBOBFunctionType::LunacekBiRastrigin => FullFireflyOptions {
+            random_generator_seed: RNG_SEED_3,
+            per_restart_options: mutate_each_option_as_duplicate(
+                generate_multiple_jitter_variants(FireflyRunOptions {
+                    swarm_size: 150,
+                    maximum_iterations: 10000,
+                    consider_stuck_after_n_iterations: 800,
+                    attractiveness_coefficient: 1f64,
+                    light_absorption_coefficient: 0.001,
+                    movement_jitter_starting_coefficient: 0.125,
+                    movement_jitter_cooling_factor: 0.999,
+                    movement_jitter_min_stuck_runs_to_reheat: 200,
+                    movement_jitter_heating_factor: 1.008,
+                    movement_jitter_minimum_coefficient: 0.009,
+                    movement_jitter_maximum_coefficient: 0.6,
+                }),
+                PREPROCESSING_RNG_SEED,
+                Some(1f64),
+            ),
+            post_process_best_options: Some(vec![
+                base_postprocessing_run_high_jitter,
+                base_postprocessing_run_low_jitter,
+            ]),
+        },
     }
 }
