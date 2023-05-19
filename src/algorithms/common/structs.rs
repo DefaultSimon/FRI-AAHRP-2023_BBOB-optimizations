@@ -29,6 +29,6 @@ impl State {
 
 impl Default for State {
     fn default() -> Self {
-        Self { objective_value: 0f64, vector: Vec::new() }
+        Self { objective_value: f64::MAX, vector: Vec::new() }
     }
 }

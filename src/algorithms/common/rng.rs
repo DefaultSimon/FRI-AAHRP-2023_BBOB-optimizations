@@ -62,6 +62,11 @@ impl UniformF64BoundedRandomGenerator {
             .map(|_| self.distribution.sample(&mut self.rng))
             .collect()
     }
+
+    pub fn sample_0_to_1(&mut self) -> f64 {
+        let random_num = self.sample();
+        (1f64/(self.bounds.upper_bound - self.bounds.lower_bound)) * (random_num - self.bounds.lower_bound)
+    }
 }
 
 pub fn choose_random<T: Clone>(vec: Vec<T>) -> T {
@@ -81,6 +86,13 @@ impl SimpleUniformRng {
         let rng = thread_rng();
         Self {
             distribution, rng
+        }
+    }
+
+    pub fn from_bounds(bounds: Bounds) -> Self {
+        Self {
+            distribution: bounds.uniform_random_generator(),
+            rng: thread_rng()
         }
     }
 
