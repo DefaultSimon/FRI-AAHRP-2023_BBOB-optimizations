@@ -303,9 +303,9 @@ pub fn get_optimized_hyperparameters(
 
     match problem {
         // <status> (delta=<distance to minimum>)
-        // OK (delta=0.00006)
+        // OK (delta=0.00000)
         BBOBFunctionType::Sphere => full_defaults,
-        // NOT OK (delta=603.90328)
+        // NOT OK (delta=16.70670)
         BBOBFunctionType::SeparableEllipsoidal => FullFireflyOptions {
             random_generator_seed: DEFAULT_RNG_SEED,
             per_restart_options: generate_multiple_jitter_variants(
@@ -325,53 +325,52 @@ pub fn get_optimized_hyperparameters(
             ),
             post_process_best_options: Some(base_postprocessing_run),
         },
-        // NOT OK (delta=516.37685)
+        // NOT OK (delta=516.37660)
         BBOBFunctionType::Rastrigin => full_defaults,
-        // NOT OK (delta=659.69163)
+        // NOT OK (delta=607.91121)
         BBOBFunctionType::BucheRastrigin => full_defaults,
-        // ALMOST OK (delta=6.64265)
+        // ALMOST OK (delta=6.50310)
         BBOBFunctionType::LinearSlope => full_defaults,
-        // OK (delta=0.00251)
+        // OK (delta=0.00003)
         BBOBFunctionType::AttractiveSector => full_defaults,
-        // ALMOST OK (delta=11.45838)
+        // ALMOST OK (delta=11.28727)
         BBOBFunctionType::StepEllipsoidal => full_defaults,
-        // OK (delta=0.70861)
+        // OK (delta=0.01275)
         BBOBFunctionType::RosenbrockFunction => full_defaults,
         // OK (delta=0.58336)
         BBOBFunctionType::RosenbrockFunctionRotated => full_defaults,
-        // NOT OK (delta=192.53581)
+        // ALMOST OK (delta=11.82058)
         BBOBFunctionType::Ellipsoidal => full_defaults,
-        // OK (delta=0.00014)
+        // OK (delta=0.00000)
         BBOBFunctionType::Discus => full_defaults,
-        // NOT OK (delta=42.96076)
+        // OK (delta=0.21867)
         BBOBFunctionType::BentCigar => full_defaults,
         // ALMOST OK (delta=1.24980)
         BBOBFunctionType::SharpRidge => full_defaults,
-        // OK (delta=0.00068)
+        // OK (delta=0.00009)
         BBOBFunctionType::DifferentPowers => full_defaults,
-        // NOT OK (delta=281.03887)
+        // NOT OK (delta=331.56584)
         // Heating helps a lot here.
         BBOBFunctionType::RastriginMultiModal => full_defaults,
-        // ALMOST OK (delta=9.48454)
+        // ALMOST OK (delta=5.92256)
         BBOBFunctionType::Weierstrass => full_defaults,
-        // ALMOST OK (delta=6.36824)
+        // ALMOST OK (delta=7.45309)
         BBOBFunctionType::SchafferF7 => full_defaults,
-        // ALMOST OK (delta=6.75608)
+        // ALMOST OK (delta=26.02107)
         BBOBFunctionType::SchafferF7IllConditioned => full_defaults,
-        // ALMOST OK (delta=2.22957)
+        // ALMOST OK (delta=1.75971)
         BBOBFunctionType::CompositeGriewankRosenbrockF8F2 => full_defaults,
-        // ALMOST OK (delta=2.27812)
+        // ALMOST OK (delta=2.16887)
         BBOBFunctionType::Schwefel => full_defaults,
-        // ALMOST OK (delta=1.93775)
+        // ALMOST OK (delta=1.93774)
         BBOBFunctionType::GallagherGaussian101MePeaks => full_defaults,
-        // ALMOST OK (delta=2.59057)
+        // ALMOST OK (delta=2.59055)
         BBOBFunctionType::GallagherGaussian21HiPeaks => full_defaults,
         // OK (delta=0.40514)
         BBOBFunctionType::Katsuura => full_defaults,
-        // NOT OK (delta=179.40182)
-        BBOBFunctionType::LunacekBiRastrigin => FullFireflyOptions {
-            random_generator_seed: DEFAULT_RNG_SEED,
-            per_restart_options: vec![FireflyRunOptions {
+        // NOT OK (delta=182.19505)
+        BBOBFunctionType::LunacekBiRastrigin => with_jitter_variants(
+            FireflyRunOptions {
                 swarm_size: 150,
                 maximum_iterations: 10000,
                 consider_stuck_after_n_iterations: 800,
@@ -383,8 +382,8 @@ pub fn get_optimized_hyperparameters(
                 movement_jitter_heating_factor: 1.008,
                 movement_jitter_minimum_coefficient: 0.009,
                 movement_jitter_maximum_coefficient: 0.6,
-            }],
-            post_process_best_options: Some(base_postprocessing_run),
-        },
+            },
+            base_postprocessing_run,
+        ),
     }
 }
