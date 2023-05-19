@@ -435,7 +435,7 @@ pub fn get_optimized_hyperparameters(
         },
         // NOT OK (delta=516.37660)
         BBOBFunctionType::Rastrigin => full_defaults,
-        // NOT OK (delta=607.91121)
+        // NOT OK (delta=550.76147)
         BBOBFunctionType::BucheRastrigin => full_defaults,
         // ALMOST OK (delta=6.50310)
         BBOBFunctionType::LinearSlope => full_defaults,
@@ -445,7 +445,7 @@ pub fn get_optimized_hyperparameters(
         BBOBFunctionType::StepEllipsoidal => full_defaults,
         // OK (delta=0.01275)
         BBOBFunctionType::RosenbrockFunction => full_defaults,
-        // OK (delta=0.58336)
+        // OK (delta=0.47029)
         BBOBFunctionType::RosenbrockFunctionRotated => full_defaults,
         // ALMOST OK (delta=11.82058)
         BBOBFunctionType::Ellipsoidal => full_defaults,
@@ -457,12 +457,12 @@ pub fn get_optimized_hyperparameters(
         BBOBFunctionType::SharpRidge => full_defaults,
         // OK (delta=0.00009)
         BBOBFunctionType::DifferentPowers => full_defaults,
-        // NOT OK (delta=331.56584)
+        // NOT OK (delta=110.47083)
         // Heating helps a lot here.
         BBOBFunctionType::RastriginMultiModal => full_defaults,
         // ALMOST OK (delta=5.92256)
         BBOBFunctionType::Weierstrass => full_defaults,
-        // ALMOST OK (delta=7.45309)
+        // ALMOST OK (delta=6.79358)
         BBOBFunctionType::SchafferF7 => full_defaults,
         // ALMOST OK (delta=26.02107)
         BBOBFunctionType::SchafferF7IllConditioned => full_defaults,
@@ -470,13 +470,13 @@ pub fn get_optimized_hyperparameters(
         BBOBFunctionType::CompositeGriewankRosenbrockF8F2 => full_defaults,
         // ALMOST OK (delta=2.16887)
         BBOBFunctionType::Schwefel => full_defaults,
-        // ALMOST OK (delta=1.93774)
+        // ALMOST OK (delta=0.69411)
         BBOBFunctionType::GallagherGaussian101MePeaks => full_defaults,
         // ALMOST OK (delta=2.59055)
         BBOBFunctionType::GallagherGaussian21HiPeaks => full_defaults,
-        // OK (delta=0.40514)
+        // OK (delta=0.27676)
         BBOBFunctionType::Katsuura => full_defaults,
-        // NOT OK (delta=182.19505)
+        // NOT OK (delta=201.06055)
         BBOBFunctionType::LunacekBiRastrigin => FullFireflyOptions {
             random_generator_seed: RNG_SEED_3,
             per_restart_options: mutate_each_option_as_duplicate(
