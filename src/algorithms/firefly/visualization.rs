@@ -160,8 +160,17 @@ impl FireflySingleRunProgressBar {
                         format!("-> {:.5}", minimum_value).yellow()
                     };
 
+                let updated_distance_str = if minimum_value
+                    < best_value_before_refinement
+                {
+                    format!("-> {:.5}", minimum_value - global_minimum)
+                        .bright_green()
+                } else {
+                    format!("-> {:.5}", minimum_value - global_minimum).yellow()
+                };
+
                 format!(
-                    "[ {} | run {}/{}]  {}/{:04} iterations | minimum: {:.5} {}, distance: {:.5}",
+                    "[ {} | run {}/{}]  {}/{:04} iterations | minimum: {:.5} {}, distance: {:.5} {}",
                     "refine best".bright_cyan().bold(),
                     run_number,
                     total_runs,
@@ -169,7 +178,8 @@ impl FireflySingleRunProgressBar {
                     options.maximum_iterations,
                     best_value_before_refinement,
                     updated_minimum_str,
-                    minimum_value - global_minimum
+                    best_value_before_refinement - global_minimum,
+                    updated_distance_str
                 )
             }
         };
