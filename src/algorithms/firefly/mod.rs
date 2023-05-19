@@ -203,9 +203,7 @@ pub fn run_firefly_swarm_optimization(
                         &multi_progress_bar,
                         best_so_far.position.clone(),
                         OptimizationRunType::Refinement {
-                            run_number: total_restarts
-                                + post_processing_run_index
-                                + 1,
+                            run_number: post_processing_run_index + 1,
                             total_runs: total_postprocessing_runs,
                             best_value_before_refinement: best_so_far.value,
                         },
