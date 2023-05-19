@@ -196,7 +196,7 @@ fn generate_multiple_jitter_variants(
 ) -> Vec<FireflyRunOptions> {
     vec![
         // Original untouched options.
-        run_options.clone(),
+        run_options,
         // Extremely high jitter variant:
         // - heats up very quickly early on when stuck and covers a very wide range when fully stuck,
         // - cools down very slowly,
@@ -322,7 +322,8 @@ fn mutate_each_option_as_duplicate(
             movement_jitter_cooling_factor: mutate_f64(
                 option.movement_jitter_cooling_factor,
                 &mut preprocessing_random_generator,
-            ),
+            )
+            .min(1f64),
             movement_jitter_min_stuck_runs_to_reheat: mutate_usize(
                 option.movement_jitter_min_stuck_runs_to_reheat,
                 &mut preprocessing_random_generator,
@@ -330,7 +331,8 @@ fn mutate_each_option_as_duplicate(
             movement_jitter_heating_factor: mutate_f64(
                 option.movement_jitter_heating_factor,
                 &mut preprocessing_random_generator,
-            ),
+            )
+            .max(1f64),
             movement_jitter_minimum_coefficient: mutate_f64(
                 option.movement_jitter_minimum_coefficient,
                 &mut preprocessing_random_generator,
@@ -396,7 +398,7 @@ pub fn get_optimized_hyperparameters(
         per_restart_options: mutate_each_option_as_duplicate(
             generate_multiple_jitter_variants(base_restart_run),
             PREPROCESSING_RNG_SEED,
-            Some(0.5),
+            Some(0.05),
         ),
         post_process_best_options: Some(vec![
             base_postprocessing_run_high_jitter,
@@ -492,7 +494,7 @@ pub fn get_optimized_hyperparameters(
                     movement_jitter_maximum_coefficient: 0.6,
                 }),
                 PREPROCESSING_RNG_SEED,
-                Some(1f64),
+                Some(0.09),
             ),
             post_process_best_options: Some(vec![
                 base_postprocessing_run_high_jitter,
