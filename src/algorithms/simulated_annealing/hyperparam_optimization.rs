@@ -1,8 +1,9 @@
+use std::cmp::max;
 use std::slice::Iter;
 
 use itertools::{iproduct, min};
 use miette::miette;
-use num::{Num, ToPrimitive};
+use num::{abs, Num, ToPrimitive};
 
 use crate::algorithms::simulated_annealing::neighborhood_generation::SANeighborhood;
 use crate::algorithms::simulated_annealing::options::SAOptions;
@@ -11,43 +12,45 @@ use crate::core::problem::BBOBProblem;
 
 use self::Option::*;
 
-pub fn get_optimal_params(problem: &mut BBOBProblem) -> SAOptions {
-    let mut min_options = SAOptions::default();
-    let mut min_value = run_sa(problem, min_options.clone()).unwrap().value;
-    let mut num_iter = 0;
+pub fn get_optimal_params(problem: &mut BBOBProblem, current_options: SAOptions) -> SAOptions {
+    let mut min_options = current_options;
+    let mut min_val = f64::MAX;
 
-    while num_iter < 20 {
-        let neighborhood = generate_neighborhood(min_value, min_options, problem);
-
-        for n in neighborhood.iter() {
-            let val = run_sa(problem, *n).unwrap().value;
-
-            if val < min_value {
-                min_value = val;
-            }
+    for _ in 0..5 {
+        let mut options = SAOptions { initial_step_size_ls: min_options.initial_step_size_ls * 0.1, ..Default::default() };
+        let mut val = run_sa(problem, options).unwrap().value;
+        if val < min_val {
+            min_options = options;
+            min_val = val;
+        }
+        options = SAOptions { initial_step_size_ls: min_options.initial_step_size_ls + 0.1, ..Default::default() };
+        if val < min_val {
+            min_options = options;
+            min_val = val;
         }
     }
 
-    SAOptions { function: problem.name, ..min_options }
+    min_options
 }
 
 fn get_value_changes(base_value: f64, options: SAOptions, problem: &mut BBOBProblem) -> Vec<OptionValue> {
     let mut option_value_changes = Vec::new();
     for option in Option::iterator() {
         match option {
-            InitialTemperature => { option_value_changes.push(get_min_temp_change(base_value, options.min_temp, problem)) }
+            //InitialTemperature => { option_value_changes.push(get_min_temp_change(base_value, options.min_temp, problem)) }
             AnnealingSchedule => { option_value_changes.push(get_anneačing_schedule_change(base_value, options.annealing_schedule, problem)) }
-            MaxIterationsSa => { option_value_changes.push(get_max_iter_sa_change(base_value, options.max_iterations_sa, problem)) }
+            //MaxIterationsSa => { option_value_changes.push(get_max_iter_sa_change(base_value, options.max_iterations_sa, problem)) }
             MaxIterationsLs => { option_value_changes.push(get_max_iter_ls_change(base_value, options.max_iterations_ls, problem)) }
-            InitialStepSizeSa => { option_value_changes.push(get_initial_step_change_sa(base_value, options.initial_step_size_sa, problem)) }
+            //InitialStepSizeSa => { option_value_changes.push(get_initial_step_change_sa(base_value, options.initial_step_size_sa, problem)) }
             InitialStepSizeLs => { option_value_changes.push(get_initial_step_change_ls(base_value, options.initial_step_size_ls, problem)) }
-            MinTemp => { option_value_changes.push(get_min_temp_change(base_value, options.min_temp, problem)) }
+            //MinTemp => { option_value_changes.push(get_min_temp_change(base_value, options.min_temp, problem)) }
             BestNSa => { option_value_changes.push(get_best_n_sa_change(base_value, options.n_best_sa, problem)) }
             BestNLs => { option_value_changes.push(get_best_n_ls_change(base_value, options.n_best_ls, problem)) }
+            _ => continue
         }
     }
 
-    option_value_changes.sort_by(|el1, el2| el1.option_diff.total_cmp(&el2.option_diff));
+    option_value_changes.sort_by(|el1, el2| el2.option_diff.total_cmp(&el1.option_diff));
     option_value_changes
 }
 
@@ -117,6 +120,7 @@ fn generate_neighbors(options: SAOptions, to_change: Option) -> Vec<SAOptions> {
 
 fn get_initial_step_change_ls(base_value: f64, initial_step: f64, problem: &mut BBOBProblem) -> OptionValue {
     let mut res = run_sa(problem, SAOptions { initial_step_size_ls: initial_step + 0.1, ..SAOptions::default() });
+    let mut direction = Direction::Negative;
 
     let pos_val = match res {
         Ok(min) => min.value,
@@ -130,11 +134,17 @@ fn get_initial_step_change_ls(base_value: f64, initial_step: f64, problem: &mut 
         Err(_) => panic!("Error evaluating SA")
     };
 
-    OptionValue { option: InitialStepSizeLs, option_diff: (base_value - neg_val) + (base_value - pos_val) }
+    if base_value - pos_val > base_value - neg_val {
+        direction = Direction::Positive
+    }
+
+    let option_diff = f64::max(base_value - pos_val, base_value - neg_val);
+    OptionValue { option: InitialStepSizeLs, option_diff, direction }
 }
 
 fn get_initial_step_change_sa(base_value: f64, initial_step: f64, problem: &mut BBOBProblem) -> OptionValue {
     let mut res = run_sa(problem, SAOptions { initial_step_size_sa: initial_step + 0.1, ..SAOptions::default() });
+    let mut direction = Direction::Negative;
 
     let pos_val = match res {
         Ok(min) => min.value,
@@ -148,12 +158,18 @@ fn get_initial_step_change_sa(base_value: f64, initial_step: f64, problem: &mut 
         Err(_) => panic!("Error evaluating SA")
     };
 
-    OptionValue { option: InitialStepSizeSa, option_diff: (base_value - neg_val) + (base_value - pos_val) }
+    if base_value - pos_val > base_value - neg_val {
+        direction = Direction::Positive
+    }
+
+    let option_diff = f64::max(base_value - pos_val, base_value - neg_val);
+    OptionValue { option: InitialStepSizeLs, option_diff, direction }
 }
 
 
 fn get_best_n_ls_change(base_value: f64, current_best: usize, problem: &mut BBOBProblem) -> OptionValue {
     let mut res = run_sa(problem, SAOptions { n_best_ls: current_best + 1, ..SAOptions::default() });
+    let mut direction = Direction::Negative;
 
     let pos_val = match res {
         Ok(min) => min.value,
@@ -167,11 +183,17 @@ fn get_best_n_ls_change(base_value: f64, current_best: usize, problem: &mut BBOB
         Err(_) => panic!("Error evaluating SA")
     };
 
-    OptionValue { option: BestNLs, option_diff: (base_value - neg_val) + (base_value - pos_val) }
+    if base_value - pos_val > base_value - neg_val {
+        direction = Direction::Positive
+    }
+
+    let option_diff = f64::max(base_value - pos_val, base_value - neg_val);
+    OptionValue { option: InitialStepSizeLs, option_diff, direction }
 }
 
 fn get_best_n_sa_change(base_value: f64, current_best: usize, problem: &mut BBOBProblem) -> OptionValue {
     let mut res = run_sa(problem, SAOptions { n_best_sa: current_best + 1, ..SAOptions::default() });
+    let mut direction = Direction::Negative;
 
     let pos_val = match res {
         Ok(min) => min.value,
@@ -185,11 +207,17 @@ fn get_best_n_sa_change(base_value: f64, current_best: usize, problem: &mut BBOB
         Err(_) => panic!("Error evaluating SA")
     };
 
-    OptionValue { option: BestNSa, option_diff: (base_value - neg_val) + (base_value - pos_val) }
+    if base_value - pos_val > base_value - neg_val {
+        direction = Direction::Positive
+    }
+
+    let option_diff = f64::max(base_value - pos_val, base_value - neg_val);
+    OptionValue { option: InitialStepSizeLs, option_diff, direction }
 }
 
 fn get_min_temp_change(base_value: f64, current_temp: f64, problem: &mut BBOBProblem) -> OptionValue {
     let mut res = run_sa(problem, SAOptions { min_temp: current_temp + 10f64, ..SAOptions::default() });
+    let mut direction = Direction::Negative;
 
     let pos_val = match res {
         Ok(min) => min.value,
@@ -203,11 +231,17 @@ fn get_min_temp_change(base_value: f64, current_temp: f64, problem: &mut BBOBPro
         Err(_) => panic!("Error evaluating SA")
     };
 
-    OptionValue { option: MinTemp, option_diff: (base_value - neg_val) + (base_value - pos_val) }
+    if base_value - pos_val > base_value - neg_val {
+        direction = Direction::Positive
+    }
+
+    let option_diff = f64::max(base_value - pos_val, base_value - neg_val);
+    OptionValue { option: InitialStepSizeLs, option_diff, direction }
 }
 
 fn get_max_iter_ls_change(base_value: f64, current_iter: u64, problem: &mut BBOBProblem) -> OptionValue {
     let mut res = run_sa(problem, SAOptions { max_iterations_ls: current_iter + 500, ..SAOptions::default() });
+    let mut direction = Direction::Negative;
 
     let pos_val = match res {
         Ok(min) => min.value,
@@ -221,11 +255,17 @@ fn get_max_iter_ls_change(base_value: f64, current_iter: u64, problem: &mut BBOB
         Err(_) => panic!("Error evaluating SA")
     };
 
-    OptionValue { option: MaxIterationsLs, option_diff: (base_value - neg_val) + (base_value - pos_val) }
+    if base_value - pos_val > base_value - neg_val {
+        direction = Direction::Positive
+    }
+
+    let option_diff = f64::max(base_value - pos_val, base_value - neg_val);
+    OptionValue { option: InitialStepSizeLs, option_diff, direction }
 }
 
 fn get_max_iter_sa_change(base_value: f64, current_iter: u64, problem: &mut BBOBProblem) -> OptionValue {
     let mut res = run_sa(problem, SAOptions { max_iterations_sa: current_iter + 500, ..SAOptions::default() });
+    let mut direction = Direction::Negative;
 
     let pos_val = match res {
         Ok(min) => min.value,
@@ -239,11 +279,17 @@ fn get_max_iter_sa_change(base_value: f64, current_iter: u64, problem: &mut BBOB
         Err(_) => panic!("Error evaluating SA")
     };
 
-    OptionValue { option: MaxIterationsSa, option_diff: (base_value - neg_val) + (base_value - pos_val) }
+    if base_value - pos_val > base_value - neg_val {
+        direction = Direction::Positive
+    }
+
+    let option_diff = f64::max(base_value - pos_val, base_value - neg_val);
+    OptionValue { option: InitialStepSizeLs, option_diff, direction }
 }
 
 fn get_anneačing_schedule_change(base_value: f64, current_schedule: f64, problem: &mut BBOBProblem) -> OptionValue {
     let mut res = run_sa(problem, SAOptions { annealing_schedule: current_schedule + 0.02f64, ..SAOptions::default() });
+    let mut direction = Direction::Negative;
 
     let pos_val = match res {
         Ok(min) => min.value,
@@ -257,11 +303,17 @@ fn get_anneačing_schedule_change(base_value: f64, current_schedule: f64, proble
         Err(_) => panic!("Error evaluating SA")
     };
 
-    OptionValue { option: AnnealingSchedule, option_diff: (base_value - neg_val) + (base_value - pos_val) }
+    if base_value - pos_val > base_value - neg_val {
+        direction = Direction::Positive
+    }
+
+    let option_diff = f64::max(base_value - pos_val, base_value - neg_val);
+    OptionValue { option: InitialStepSizeLs, option_diff, direction }
 }
 
 fn get_initial_temp_change(base_value: f64, initial_temp: u8, problem: &mut BBOBProblem) -> OptionValue {
     let mut res = run_sa(problem, SAOptions { initial_temperature: initial_temp + 5, ..SAOptions::default() });
+    let mut direction = Direction::Negative;
 
     let pos_val = match res {
         Ok(min) => min.value,
@@ -275,9 +327,15 @@ fn get_initial_temp_change(base_value: f64, initial_temp: u8, problem: &mut BBOB
         Err(_) => panic!("Error evaluating SA")
     };
 
-    OptionValue { option: InitialTemperature, option_diff: (base_value - neg_val) + (base_value - pos_val) }
+    if base_value - pos_val > base_value - neg_val {
+        direction = Direction::Positive
+    }
+
+    let option_diff = f64::max(base_value - pos_val, base_value - neg_val);
+    OptionValue { option: InitialStepSizeLs, option_diff, direction }
 }
 
+#[derive(Clone, Copy)]
 enum Direction {
     Positive,
     Negative,
@@ -308,4 +366,5 @@ impl Option {
 struct OptionValue {
     pub option: Option,
     pub option_diff: f64,
+    pub direction: Direction,
 }

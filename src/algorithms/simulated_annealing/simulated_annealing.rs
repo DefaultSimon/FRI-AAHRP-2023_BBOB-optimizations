@@ -2,6 +2,7 @@ use std::borrow::BorrowMut;
 use std::f64::consts::E;
 
 use miette::{miette, Result};
+use num::abs;
 
 use crate::algorithms::common::rng::{choose_random, SimpleUniformRng, UniformF64BoundedRandomGenerator};
 use crate::algorithms::common::structs::State;
@@ -25,7 +26,7 @@ pub fn run_sa(problem: &mut BBOBProblem, options: SAOptions) -> Result<Minimum> 
     let mut temperature = options.initial_temperature as f64;
     let mut iters = 0;
 
-    while temperature > options.min_temp ||  iters > options.max_iterations_sa {
+    while temperature > options.min_temp || iters > options.max_iterations_sa {
         neighborhood.generate_neighborhood(current_state.clone(), problem, options);
         let next_state = &mut choose_random(neighborhood.states.clone());
         next_state.set_objective_value(problem.evaluate(&next_state.vector));
@@ -47,24 +48,62 @@ pub fn run_sa(problem: &mut BBOBProblem, options: SAOptions) -> Result<Minimum> 
 fn local_search(
     mut problem: &mut BBOBProblem,
     start_state: &State,
-    options: SAOptions
+    options: SAOptions,
 ) -> Result<Minimum> {
     let mut current_state = start_state.clone();
     let mut minimal_state = current_state.clone();
     let mut neighborhood = &mut LocalSearchNeighborhood::new(problem.bounds, options.seed);
     let mut iters = 0;
+    let mut step = options.initial_step_size_ls;
+    let mut last_10_values = Vec::new();
+    last_10_values.resize(10, 0f64);
+    let mut current_options = options.clone();
 
-    while iters <  options.max_iterations_ls {
-        neighborhood.generate_neighborhood(minimal_state.clone(), problem, options);
+    while iters < options.max_iterations_ls || step <= 0.0001 {
+        neighborhood.generate_neighborhood(minimal_state.clone(), problem, current_options);
         for el in neighborhood.states.iter() {
             let mut moved = el.clone();
-            moved.set_objective_value(problem.evaluate(&el.vector));
+            let objective_value = problem.evaluate(&el.vector);
+
+            last_10_values[(iters % 10) as usize] = objective_value;
+            moved.set_objective_value(objective_value);
             if moved.objective_value < minimal_state.objective_value {
                 minimal_state = moved.clone();
             }
         }
+
+        last_10_values[(iters % 10) as usize] = minimal_state.objective_value;
+
+        // if check_last_10_similar(&last_10_values) {
+        //     if step <= 1f64 {
+        //         step *= 0.1;
+        //     } else {
+        //         step -= 0.1;
+        //     }
+        //     if step > 0f64 {
+        //
+        //         println!("Step: {}", step);
+        //     }
+        //     current_options = SAOptions { initial_step_size_ls: step, ..current_options };
+        // }
+
         iters += 1;
     }
 
     Ok(Minimum { vector: minimal_state.vector, value: minimal_state.objective_value })
+}
+
+fn check_last_10_similar(last_10: &Vec<f64>) -> bool {
+    if last_10.len() < 10 {
+        return false;
+    }
+    let fst = last_10[0];
+
+    for el in last_10.iter() {
+        if abs(*el - fst) > 1f64 {
+            return false;
+        }
+    }
+
+    true
 }

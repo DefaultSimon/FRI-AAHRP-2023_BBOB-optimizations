@@ -25,14 +25,14 @@ impl Default for SAOptions {
         Self {
             function: BBOBFunction::AttractiveSector,
             initial_temperature: 100,
-            annealing_schedule: 0.95,
+            annealing_schedule: 0.9,
             max_iterations_sa: 2000,
-            max_iterations_ls: 10000,
-            initial_step_size_sa: 0.01,
-            initial_step_size_ls: 0.01,
+            max_iterations_ls: 50000,
+            initial_step_size_sa: 0.7,
+            initial_step_size_ls: 0.1,
             min_temp: 0.01,
-            n_best_sa: 5,
-            n_best_ls: 5,
+            n_best_sa: 39,
+            n_best_ls: 39,
             seed: [67, 193, 140, 181, 155, 182, 45, 146, 4, 213, 77, 160, 217, 31, 143, 135],
         }
     }
