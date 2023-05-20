@@ -146,7 +146,7 @@ pub fn run_firefly_swarm_optimization(
     //      See https://en.wikipedia.org/wiki/Multi-swarm_optimization
 
     // Parse options, initialize random generator and perform runs.
-    let mut total_restarts = options.per_restart_options.len();
+    let total_restarts = options.per_restart_options.len();
 
     let mut seed_generator =
         UniformU8RandomGenerator::new(options.random_generator_seed);

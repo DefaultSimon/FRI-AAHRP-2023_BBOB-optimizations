@@ -9,18 +9,19 @@ use crate::core::functions::ALL_BBOB_FUNCTIONS;
 use crate::core::suite::BBOBSuite;
 
 pub fn run_cmd_simulated_annealing() -> Result<()> {
-    let mut suite = BBOBSuite::new()?;
-
     let total_start_time = Instant::now();
 
-    let run_options = SAOptions::default();
 
     // Run all 24 BBOB problems.
     for bbob_function in ALL_BBOB_FUNCTIONS {
-        let problem = suite.problem(bbob_function)?;
+        let options = SAOptions::default();
+
+        let mut suite = BBOBSuite::new()?;
+        let mut problem = suite.problem(bbob_function)?;
+
         let problem_start_time = Instant::now();
 
-        let results = run_sa(problem, run_options)?;
+        let results = run_sa(&mut problem, options)?;
 
         let problem_delta_time = problem_start_time.elapsed().as_secs_f64();
 
@@ -56,6 +57,24 @@ pub fn run_cmd_simulated_annealing() -> Result<()> {
         "\n-- Finished all 24 problems in {:.4} seconds --",
         total_delta_time
     );
-
+    // let mut handles = Vec::new();
+    // for bbob_function in ALL_BBOB_FUNCTIONS.as_ref() {
+    //     let mut suite_inner = BBOBSuite::new().unwrap();
+    //     handles.push(thread::spawn(move || {
+    //         let mut problem = suite_inner.problem(*bbob_function, None).unwrap();
+    //         println!("Finding optimal parameters:");
+    //         get_optimal_params(&mut problem)
+    //     }));
+    // }
+    //
+    // for jh in handles.into_iter() {
+    //     let options = jh.join().unwrap();
+    //     let mut file = OpenOptions::new()
+    //         .create(true)
+    //         .append(true)
+    //         .open("opitons.txt")
+    //         .unwrap();
+    //     file.write(format!("{}Options {}", options.function.name(), options.to_str()).as_bytes()).expect("Unable to write to file");
+    // }
     Ok(())
 }

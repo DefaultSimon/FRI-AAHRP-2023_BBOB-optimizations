@@ -6,8 +6,8 @@ use crate::core::functions::BBOBFunctionType;
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct Bounds {
-    lower_bound: f64,
-    upper_bound: f64,
+    pub lower_bound: f64,
+    pub upper_bound: f64,
 }
 
 impl Bounds {
