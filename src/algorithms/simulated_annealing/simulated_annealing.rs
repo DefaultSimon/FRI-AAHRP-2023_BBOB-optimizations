@@ -68,10 +68,10 @@ fn local_search(
     let neighborhood =
         &mut LocalSearchNeighborhood::new(problem.bounds, options.seed);
     let mut iters = 0;
-    let step = options.initial_step_size_ls;
+    let mut step = options.initial_step_size_ls;
     let mut last_10_values = Vec::new();
     last_10_values.resize(10, 0f64);
-    let current_options = options.clone();
+    let mut current_options = options.clone();
 
     while iters < options.max_iterations_ls || step <= 0.0001 {
         neighborhood.generate_neighborhood(

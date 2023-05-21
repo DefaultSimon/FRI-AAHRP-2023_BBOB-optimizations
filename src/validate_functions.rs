@@ -240,7 +240,6 @@ fn compare_r_with_rust(r_samples: FunctionSamples) -> Result<()> {
             BBOBFunctionType::from_function_index(function_index).ok_or_else(
                 || miette!("Invalid function index! Not in 1-24 range."),
             )?,
-            None,
         )?;
 
         for (sample_index, sample) in samples.iter().enumerate() {
