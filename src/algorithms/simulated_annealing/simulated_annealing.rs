@@ -92,18 +92,14 @@ fn local_search(
 
         last_10_values[(iters % 10) as usize] = minimal_state.objective_value;
 
-        // if check_last_10_similar(&last_10_values) {
-        //     if step <= 1f64 {
-        //         step *= 0.1;
-        //     } else {
-        //         step -= 0.1;
-        //     }
-        //     if step > 0f64 {
-        //
-        //         println!("Step: {}", step);
-        //     }
-        //     current_options = SAOptions { initial_step_size_ls: step, ..current_options };
-        // }
+        if check_last_10_similar(&last_10_values) {
+            if step <= 1f64 {
+                step *= 0.1;
+            } else {
+                step -= 0.1;
+            }
+            current_options = SAOptions { initial_step_size_ls: step, ..current_options };
+        }
 
         iters += 1;
     }
