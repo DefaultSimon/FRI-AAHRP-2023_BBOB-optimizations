@@ -40,30 +40,3 @@ impl Default for SAOptions {
         }
     }
 }
-
-impl SAOptions {
-    pub fn to_str(&self) -> String {
-        format!(
-            "{{\
-        \"initial_temperature: {},\n
-        \"annealing_schedule: {},\n
-        \"max_iterations_sa: {},\n
-        \"max_iterations_ls: {},\n
-        \"initial_step_size_sa: {},\n
-        \"initial_step_size_ls: {},\n\
-        \"min_temp: {},\n
-        \"n_best_sa: {},\n
-        \"n_best_ls: {},\n
-        }}",
-            self.initial_temperature,
-            self.annealing_schedule,
-            self.max_iterations_sa,
-            self.max_iterations_ls,
-            self.initial_step_size_sa,
-            self.initial_step_size_ls,
-            self.min_temp,
-            self.n_best_sa,
-            self.n_best_ls
-        )
-    }
-}
