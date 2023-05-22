@@ -89,7 +89,7 @@ pub fn run_cmd_simulated_annealing() -> Result<()> {
     let mut file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open("cordinates.txt")
+        .open("../../simulated-annealing-results.txt")
         .unwrap();
 
     for vec in vecs.iter() {
