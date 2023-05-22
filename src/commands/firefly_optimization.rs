@@ -77,7 +77,10 @@ pub fn cmd_run_all_problems() -> Result<()> {
             .map(|parameter| parameter.to_string())
             .join(",");
 
-        println!("  Optimized in {:.4} seconds", problem_delta_time);
+        println!(
+            "\n  Optimized in {:.4} seconds",
+            problem_delta_time
+        );
 
         println!(
             "  Minimum: {}",
@@ -89,6 +92,7 @@ pub fn cmd_run_all_problems() -> Result<()> {
             "  Distance from global minimum: {:.5}",
             optimization_results.minimum.value - bbob_function.global_minimum()
         );
+        println!();
         println!();
     }
 

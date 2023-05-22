@@ -3,7 +3,7 @@ use std::io::Write;
 use std::time::Instant;
 
 use itertools::Itertools;
-use miette::Result;
+use miette::{miette, Context, IntoDiagnostic, Result};
 
 use crate::algorithms::simulated_annealing::hyperparam_optimization::get_optimal_params;
 use crate::algorithms::simulated_annealing::options::SAOptions;
@@ -96,29 +96,16 @@ pub fn run_cmd_simulated_annealing() -> Result<()> {
         .unwrap();
 
     for vec in vectors.iter() {
-        file.write(vec.iter().map(|el| el.to_string()).join("\t").as_bytes())
-            .unwrap();
-        file.write("\n".as_bytes()).unwrap();
+        file.write_all(
+            vec.iter().map(|el| el.to_string()).join("\t").as_bytes(),
+        )
+        .into_diagnostic()
+        .wrap_err_with(|| miette!("Could not write to results file."))?;
+
+        file.write_all("\n".as_bytes())
+            .into_diagnostic()
+            .wrap_err_with(|| miette!("Could not write to results file."))?;
     }
 
-    // let mut handles = Vec::new();
-    // for bbob_function in ALL_BBOB_FUNCTIONS.as_ref() {
-    //     let mut suite_inner = BBOBSuite::new().unwrap();
-    //     handles.push(thread::spawn(move || {
-    //         let mut problem = suite_inner.problem(*bbob_function, None).unwrap();
-    //         println!("Finding optimal parameters:");
-    //         get_optimal_params(&mut problem)
-    //     }));
-    // }
-    //
-    // for jh in handles.into_iter() {
-    //     let options = jh.join().unwrap();
-    //     let mut file = OpenOptions::new()
-    //         .create(true)
-    //         .append(true)
-    //         .open("opitons.txt")
-    //         .unwrap();
-    //     file.write(format!("{}Options {}", options.function.name(), options.to_str()).as_bytes()).expect("Unable to write to file");
-    // }
     Ok(())
 }

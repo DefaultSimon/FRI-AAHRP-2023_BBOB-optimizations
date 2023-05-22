@@ -14,6 +14,7 @@ mod core;
 
 
 #[derive(Parser)]
+#[command(name = "optimization-cli", author, version)]
 struct CLIArgs {
     #[command(subcommand)]
     pub command: CLICommands,
@@ -28,7 +29,7 @@ enum CLICommands {
     RunFireflyOptimization(CLIFireflyOptimizationArgs),
 
     #[command(
-        name = "simulated-annealing",
+        name = "run-simulated-annealing",
         about = "Runs simulated annealing (local search optimization technique)."
     )]
     RunSimulatedAnnealing,
