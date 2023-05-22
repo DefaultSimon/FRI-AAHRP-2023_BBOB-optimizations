@@ -15,13 +15,16 @@ pub fn run_cmd_simulated_annealing() -> Result<()> {
     let total_start_time = Instant::now();
 
     let mut minimums = Vec::new();
-    let mut vecs = Vec::new();
+    let mut vectors = Vec::new();
+
     // Run all 24 BBOB problems.
     for bbob_function in ALL_BBOB_FUNCTIONS {
         let mut options = SAOptions::default();
+
         let mut fun_values = Vec::new();
-        let mut min_vecs = Vec::new();
-        for i in 0..20 {
+        let mut min_vectors = Vec::new();
+
+        for _ in 0..20 {
             let mut suite = BBOBSuite::new()?;
             let mut problem = suite.problem(bbob_function)?;
 
@@ -29,7 +32,7 @@ pub fn run_cmd_simulated_annealing() -> Result<()> {
 
             let results = run_sa(&mut problem, options)?;
             fun_values.push(results.value);
-            min_vecs.push(results.vector.clone());
+            min_vectors.push(results.vector.clone());
 
             let problem_delta_time = problem_start_time.elapsed().as_secs_f64();
 
@@ -44,12 +47,10 @@ pub fn run_cmd_simulated_annealing() -> Result<()> {
                 bbob_function.index(),
                 ALL_BBOB_FUNCTIONS.len(),
                 bbob_function.name(),
-                //results.iterations_performed,
-                //run_options.maximum_iterations,
                 problem_delta_time
             );
 
-            println!("  Minimum: {}", results.value, );
+            println!("  Minimum: {}", results.value,);
             println!("  At: [{}]", formatted_parameters);
 
             println!(
@@ -60,6 +61,7 @@ pub fn run_cmd_simulated_annealing() -> Result<()> {
             println!("Finding optimal params:");
             options = get_optimal_params(&mut problem, options);
         }
+
         let mut min = f64::MAX;
         let mut min_index = 0;
         for (i, el) in fun_values.iter().enumerate() {
@@ -70,7 +72,7 @@ pub fn run_cmd_simulated_annealing() -> Result<()> {
         }
 
         minimums.push(min);
-        vecs.push(min_vecs[min_index].clone());
+        vectors.push(min_vectors[min_index].clone());
     }
 
     let total_delta_time = total_start_time.elapsed().as_secs_f64();
@@ -92,9 +94,13 @@ pub fn run_cmd_simulated_annealing() -> Result<()> {
         .open("results/simulated-annealing-results.txt")
         .unwrap();
 
-    for vec in vecs.iter() {
-        file.write(vec.iter().map(|el| el.to_string()).join("\t").as_bytes()).unwrap();
-        file.write("\n".as_bytes()).unwrap();
+    for vec in vectors.iter() {
+        file.write_all(
+            vec.iter().map(|el| el.to_string()).join("\t").as_bytes(),
+        )
+        .unwrap();
+
+        file.write_all("\n".as_bytes()).unwrap();
     }
 
     // let mut handles = Vec::new();

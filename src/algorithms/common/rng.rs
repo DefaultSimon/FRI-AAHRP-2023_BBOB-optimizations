@@ -1,6 +1,5 @@
 use rand::distributions::{Distribution, Uniform};
-use rand::{SeedableRng, thread_rng};
-use rand::rngs::ThreadRng;
+use rand::{thread_rng, SeedableRng};
 use rand_pcg::Pcg64Mcg;
 
 use crate::core::problem::Bounds;
@@ -65,7 +64,8 @@ impl UniformF64BoundedRandomGenerator {
 
     pub fn sample_0_to_1(&mut self) -> f64 {
         let random_num = self.sample();
-        (1f64/(self.bounds.upper_bound - self.bounds.lower_bound)) * (random_num - self.bounds.lower_bound)
+        (1f64 / (self.bounds.upper_bound - self.bounds.lower_bound))
+            * (random_num - self.bounds.lower_bound)
     }
 }
 
@@ -73,34 +73,4 @@ pub fn choose_random<T: Clone>(vec: Vec<T>) -> T {
     let mut rng = thread_rng();
     let uniform = Uniform::new(0, vec.len());
     vec[uniform.sample(&mut rng)].clone()
-}
-
-pub struct SimpleUniformRng {
-    distribution: Uniform<f64>,
-    rng: ThreadRng
-}
-
-impl SimpleUniformRng {
-    pub fn new(low: f64, high: f64) -> Self {
-        let distribution = Uniform::new(low, high);
-        let rng = thread_rng();
-        Self {
-            distribution, rng
-        }
-    }
-
-    pub fn from_bounds(bounds: Bounds) -> Self {
-        Self {
-            distribution: bounds.uniform_random_generator(),
-            rng: thread_rng()
-        }
-    }
-
-    pub fn sample(&mut self) -> f64 {
-        self.distribution.sample(&mut self.rng)
-    }
-
-    pub fn sample_multiple(&mut self, size: usize) -> Vec<f64> {
-        (0..size).map(|_| self.sample()).collect()
-    }
 }
