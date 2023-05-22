@@ -15,7 +15,17 @@
 - Inside the `coco` directory, execute `python3 do.py build-rust` (tested on Python 3.10, no dependencies needed).
 - The `coco-sys` / `coco-rs` libraries are now ready.
 
-## 2. How to validate equality with R's `smoof` package
+## 2. Executing the algorithms
+### 2.1 Running Simulated annealing
+To run the simulated annealing algorithm on all 24 BBOB problems, run `cargo run --release --bin optimization_cli -- run-simulated-annealing`.
+
+### 2.2 Running Firefly optimization
+To run the firefly optimization algorithm on all 24 BBOB problems, run `cargo run --release --bin optimization_cli -- run-firefly-optimization all`.
+To optimize a specific problem instead (e.g. 1), run `cargo run --release --bin optimization_cli -- run-firefly-optimization single --problem 1`.
+
+---
+
+## 3. How to validate equality with R's `smoof` package
 To validate that the functions we're testing in Rust are actually the same ones as provided by the `smoof`
 package in R (`makeBBOBFunction`), a comparison has been set up in the `validate_functions` binary.
 
