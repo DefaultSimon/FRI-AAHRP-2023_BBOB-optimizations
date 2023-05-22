@@ -407,24 +407,22 @@ pub fn get_optimized_hyperparameters(
         // <status> (delta=<distance to minimum>)
         // OK (delta=0.00000)
         BBOBFunctionType::Sphere => full_defaults,
-        // NOT OK (delta=16.70670)
+        // NOT OK (delta=12.61137)
         BBOBFunctionType::SeparableEllipsoidal => FullFireflyOptions {
             random_generator_seed: DEFAULT_RNG_SEED,
-            per_restart_options: generate_multiple_jitter_variants(
-                FireflyRunOptions {
-                    swarm_size: 40,
-                    maximum_iterations: 20000,
-                    consider_stuck_after_n_iterations: 1500,
-                    attractiveness_coefficient: 1f64,
-                    light_absorption_coefficient: 0.02,
-                    movement_jitter_starting_coefficient: 0.065,
-                    movement_jitter_cooling_factor: 0.985,
-                    movement_jitter_min_stuck_runs_to_reheat: 300,
-                    movement_jitter_heating_factor: 1.01,
-                    movement_jitter_minimum_coefficient: 0.01,
-                    movement_jitter_maximum_coefficient: 0.115,
-                },
-            ),
+            per_restart_options: vec![FireflyRunOptions {
+                swarm_size: 50,
+                maximum_iterations: 500000,
+                consider_stuck_after_n_iterations: 2000,
+                attractiveness_coefficient: 1f64,
+                light_absorption_coefficient: 0.02,
+                movement_jitter_starting_coefficient: 0.005,
+                movement_jitter_cooling_factor: 0.996,
+                movement_jitter_min_stuck_runs_to_reheat: 800,
+                movement_jitter_heating_factor: 1.0001,
+                movement_jitter_minimum_coefficient: 0.0004,
+                movement_jitter_maximum_coefficient: 0.01,
+            }],
             post_process_best_options: Some(vec![
                 base_postprocessing_run_high_jitter,
                 base_postprocessing_run_low_jitter,
@@ -475,7 +473,7 @@ pub fn get_optimized_hyperparameters(
         BBOBFunctionType::Katsuura => full_defaults,
         // NOT OK (delta=201.06055)
         BBOBFunctionType::LunacekBiRastrigin => FullFireflyOptions {
-            random_generator_seed: RNG_SEED_3,
+            random_generator_seed: DEFAULT_RNG_SEED,
             per_restart_options: mutate_each_option_as_duplicate(
                 generate_multiple_jitter_variants(FireflyRunOptions {
                     swarm_size: 150,
