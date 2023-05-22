@@ -31,7 +31,7 @@ pub fn run_sa(problem: &mut BBOBProblem, options: SAOptions) -> Result<Minimum> 
     let mut temperature = options.initial_temperature as f64;
     let mut iters = 0;
 
-    while temperature > options.min_temp || iters > options.max_iterations_sa {
+    while temperature > options.min_temp || iters < options.max_iterations_sa {
         neighborhood.generate_neighborhood(
             current_state.clone(),
             problem,
@@ -73,7 +73,7 @@ fn local_search(
     last_10_values.resize(10, 0f64);
     let mut current_options = options.clone();
 
-    while iters < options.max_iterations_ls || step <= 0.0001 {
+    while iters < options.max_iterations_ls && step >= 10e-16 {
         neighborhood.generate_neighborhood(
             minimal_state.clone(),
             problem,
@@ -92,11 +92,11 @@ fn local_search(
 
         last_10_values[(iters % 10) as usize] = minimal_state.objective_value;
 
-        if check_last_10_similar(&last_10_values) {
+        if check_last_10_similar(&last_10_values, step) {
             if step <= 1f64 {
-                step *= 0.1;
+                step *= options.ls_step_decrease;
             } else {
-                step -= 0.1;
+                step -= options.ls_step_decrease;
             }
             current_options = SAOptions { initial_step_size_ls: step, ..current_options };
         }
@@ -110,14 +110,14 @@ fn local_search(
     })
 }
 
-fn check_last_10_similar(last_10: &Vec<f64>) -> bool {
+fn check_last_10_similar(last_10: &Vec<f64>, step: f64) -> bool {
     if last_10.len() < 10 {
         return false;
     }
     let fst = last_10[0];
 
     for el in last_10.iter() {
-        if abs(*el - fst) > 1f64 {
+        if abs(*el - fst) >  10e-3 {
             return false;
         }
     }

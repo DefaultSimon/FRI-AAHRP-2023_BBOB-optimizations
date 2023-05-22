@@ -39,22 +39,25 @@ impl SANeighborhood {
         self.states = Vec::new();
         for (i, el) in changes[0..options.n_best_ls].to_vec().iter().enumerate()
         {
-            let mut new_state = current_state.clone().vector;
-            if el.value_diff > 0f64 {
-                if new_state[el.index] + options.initial_step_size_ls <= 5f64 {
-                    new_state[el.index] += options.initial_step_size_ls;
+            for j in 0..10 {
+                let mut new_state = current_state.clone().vector;
+                let step = (options.initial_step_size_ls * j as f64) as f64;
+                if el.value_diff > 0f64 {
+                    if new_state[el.index] + step <= 5f64 {
+                        new_state[el.index] += step;
+                        self.states.push(State {
+                            vector: new_state,
+                            ..Default::default()
+                        });
+                    }
+                } else if new_state[el.index] - step >= -5f64
+                {
+                    new_state[el.index] -= step;
                     self.states.push(State {
                         vector: new_state,
                         ..Default::default()
                     });
                 }
-            } else if new_state[el.index] - options.initial_step_size_ls >= -5f64
-            {
-                new_state[el.index] -= options.initial_step_size_ls;
-                self.states.push(State {
-                    vector: new_state,
-                    ..Default::default()
-                });
             }
         }
     }
@@ -67,7 +70,7 @@ impl SANeighborhood {
     ) -> Vec<VectorElement> {
         let base_value = problem.evaluate(&current_neighborhood);
 
-        let vec_elements: Vec<VectorElement> = (0..39)
+        let vec_elements: Vec<VectorElement> = (0..40)
             .map(|i| {
                 let mut new_vec = current_neighborhood.clone();
                 new_vec[i] += 0.01f64;
@@ -112,18 +115,20 @@ impl LocalSearchNeighborhood {
         );
         self.states = Vec::new();
         for (i, el) in changes[0..options.n_best_ls].iter().enumerate() {
-            let mut new_state = current_state.clone().vector;
-            if el.value_diff > 0f64 {
-                if new_state[el.index] + options.initial_step_size_ls <= 5f64 {
-                    new_state[el.index] += options.initial_step_size_ls;
-                    self.states.push(State {
-                        vector: new_state,
-                        ..Default::default()
-                    });
-                }
-            } else {
-                if new_state[el.index] - options.initial_step_size_ls >= -5f64 {
-                    new_state[el.index] -= options.initial_step_size_ls;
+            for j in 0..20 {
+                let mut new_state = current_state.clone().vector;
+                let step = (options.initial_step_size_ls * j as f64) as f64;
+                if el.value_diff > 0f64 {
+                    if new_state[el.index] + step <= 5f64 {
+                        new_state[el.index] += step;
+                        self.states.push(State {
+                            vector: new_state,
+                            ..Default::default()
+                        });
+                    }
+                } else if new_state[el.index] - step >= -5f64
+                {
+                    new_state[el.index] -= step;
                     self.states.push(State {
                         vector: new_state,
                         ..Default::default()
@@ -140,13 +145,13 @@ impl LocalSearchNeighborhood {
     ) -> Vec<VectorElement> {
         let base_value = problem.evaluate(&current_neighborhood);
 
-        let vec_elements: Vec<VectorElement> = (0..39)
+        let vec_elements: Vec<VectorElement> = (0..40)
             .map(|i| {
                 let mut new_vec = current_neighborhood.clone();
-                new_vec[i] += 0.01f64;
+                new_vec[i] += step_size;
                 let value = problem.evaluate(&new_vec);
 
-                new_vec[i] -= 0.02f64;
+                new_vec[i] -= 2f64 * step_size;
                 let value2 = problem.evaluate(&new_vec);
                 let mut value_diff = 0f64;
                 if base_value - value > base_value - value2 {
@@ -156,7 +161,7 @@ impl LocalSearchNeighborhood {
                 }
                 VectorElement::new(i, value_diff)
             })
-            .sorted_by(|el1, el2| el2.value_diff.total_cmp(&el1.value_diff))
+            .sorted_by(|el1, el2| el1.value_diff.total_cmp(&el2.value_diff))
             .collect();
 
         vec_elements
