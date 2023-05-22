@@ -103,24 +103,5 @@ pub fn run_cmd_simulated_annealing() -> Result<()> {
         file.write_all("\n".as_bytes()).unwrap();
     }
 
-    // let mut handles = Vec::new();
-    // for bbob_function in ALL_BBOB_FUNCTIONS.as_ref() {
-    //     let mut suite_inner = BBOBSuite::new().unwrap();
-    //     handles.push(thread::spawn(move || {
-    //         let mut problem = suite_inner.problem(*bbob_function, None).unwrap();
-    //         println!("Finding optimal parameters:");
-    //         get_optimal_params(&mut problem)
-    //     }));
-    // }
-    //
-    // for jh in handles.into_iter() {
-    //     let options = jh.join().unwrap();
-    //     let mut file = OpenOptions::new()
-    //         .create(true)
-    //         .append(true)
-    //         .open("opitons.txt")
-    //         .unwrap();
-    //     file.write(format!("{}Options {}", options.function.name(), options.to_str()).as_bytes()).expect("Unable to write to file");
-    // }
     Ok(())
 }

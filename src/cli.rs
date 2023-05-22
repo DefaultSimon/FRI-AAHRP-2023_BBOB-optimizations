@@ -1,10 +1,10 @@
 use clap::{Parser, Subcommand};
 use coco_rs::LogLevel;
-use miette::{Context, IntoDiagnostic, miette, Result};
+use miette::{miette, Context, IntoDiagnostic, Result};
 
 use crate::commands::firefly_optimization::{
-    CLIFireflyOptimizationArgs,
     cmd_run_firefly_optimization,
+    CLIFireflyOptimizationArgs,
 };
 use crate::commands::simulated_annealing::run_cmd_simulated_annealing;
 
@@ -14,6 +14,7 @@ mod core;
 
 
 #[derive(Parser)]
+#[command(name = "optimization-cli", author, version)]
 struct CLIArgs {
     #[command(subcommand)]
     pub command: CLICommands,
@@ -22,14 +23,14 @@ struct CLIArgs {
 #[derive(Subcommand, Eq, PartialEq)]
 enum CLICommands {
     #[command(
-    name = "run-firefly-optimization",
-    about = "Runs the Firefly Optimization (variant of swarm optimization algorithm)."
+        name = "run-firefly-optimization",
+        about = "Runs the Firefly Optimization (variant of swarm optimization algorithm)."
     )]
     RunFireflyOptimization(CLIFireflyOptimizationArgs),
 
     #[command(
-    name = "simulated-annealing",
-    about = "Runs simulated annealing (local search optimization technique)."
+        name = "run-simulated-annealing",
+        about = "Runs simulated annealing (local search optimization technique)."
     )]
     RunSimulatedAnnealing,
 }

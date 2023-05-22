@@ -2,6 +2,7 @@
 name = "aahrp_2023_bbob_optimizations"
 version = "0.1.0"
 edition = "2021"
+authors = ["Aljaž Šuštar", "Simon Goričar"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
