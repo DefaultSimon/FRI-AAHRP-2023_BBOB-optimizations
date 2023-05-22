@@ -68,10 +68,10 @@ fn local_search(
     let neighborhood =
         &mut LocalSearchNeighborhood::new(problem.bounds, options.seed);
     let mut iters = 0;
-    let step = options.initial_step_size_ls;
+    let mut step = options.initial_step_size_ls;
     let mut last_10_values = Vec::new();
     last_10_values.resize(10, 0f64);
-    let current_options = options.clone();
+    let mut current_options = options.clone();
 
     while iters < options.max_iterations_ls || step <= 0.0001 {
         neighborhood.generate_neighborhood(
@@ -92,18 +92,14 @@ fn local_search(
 
         last_10_values[(iters % 10) as usize] = minimal_state.objective_value;
 
-        // if check_last_10_similar(&last_10_values) {
-        //     if step <= 1f64 {
-        //         step *= 0.1;
-        //     } else {
-        //         step -= 0.1;
-        //     }
-        //     if step > 0f64 {
-        //
-        //         println!("Step: {}", step);
-        //     }
-        //     current_options = SAOptions { initial_step_size_ls: step, ..current_options };
-        // }
+        if check_last_10_similar(&last_10_values) {
+            if step <= 1f64 {
+                step *= 0.1;
+            } else {
+                step -= 0.1;
+            }
+            current_options = SAOptions { initial_step_size_ls: step, ..current_options };
+        }
 
         iters += 1;
     }
