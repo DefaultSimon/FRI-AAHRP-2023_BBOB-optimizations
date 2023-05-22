@@ -29,7 +29,7 @@ pub struct FireflySwarm<'p: 'pref, 'pref, 'options> {
 impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
     // Initialize the swarm with the given `FireflyOptions`.
     pub fn initialize_random(
-        mut problem: &'pref mut BBOBProblem<'p>,
+        problem: &'pref mut BBOBProblem<'p>,
         seed_generator: &mut UniformU8RandomGenerator,
         options: &'options FireflyRunOptions,
     ) -> Self {
@@ -54,7 +54,7 @@ impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
                 let initial_position: Vec<f64> = in_bounds_uniform_generator
                     .sample_multiple(input_dimensions);
 
-                Firefly::new(initial_position, &mut problem)
+                Firefly::new(initial_position, problem)
             })
             .collect();
 
@@ -77,7 +77,7 @@ impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
     }
 
     pub fn initialize_at_point(
-        mut problem: &'pref mut BBOBProblem<'p>,
+        problem: &'pref mut BBOBProblem<'p>,
         seed_generator: &mut UniformU8RandomGenerator,
         options: &'options FireflyRunOptions,
         initial_point: Vec<f64>,
@@ -89,7 +89,7 @@ impl<'p: 'pref, 'pref, 'options> FireflySwarm<'p, 'pref, 'options> {
             );
 
         let mut fireflies: Vec<Firefly> = (0..options.swarm_size)
-            .map(|_| Firefly::new(initial_point.clone(), &mut problem))
+            .map(|_| Firefly::new(initial_point.clone(), problem))
             .collect();
 
         fireflies.sort_unstable_by(|first, second| {

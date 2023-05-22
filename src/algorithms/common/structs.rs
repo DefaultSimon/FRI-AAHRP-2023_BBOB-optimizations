@@ -18,7 +18,7 @@ pub struct State {
 }
 
 impl State {
-    pub fn set_objective_value(&mut self, obj_value: f64) -> () {
+    pub fn set_objective_value(&mut self, obj_value: f64) {
         self.objective_value = obj_value;
     }
 }
