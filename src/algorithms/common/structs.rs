@@ -14,27 +14,21 @@ impl Minimum {
 #[derive(Debug, Clone)]
 pub struct State {
     pub vector: Vec<f64>,
-    pub objective_value: f64,
+    pub objective_value: f64
 }
 
 impl State {
-    pub fn new_without_value(vector: Vec<f64>) -> Self {
-        Self {
-            vector,
-            objective_value: f64::default(),
-        }
+    pub fn new(vector: Vec<f64>, objective_value: f64) -> Self {
+        Self {vector, objective_value}
     }
 
-    pub fn set_objective_value(&mut self, obj_value: f64) {
+    pub fn set_objective_value(&mut self, obj_value: f64) -> () {
         self.objective_value = obj_value;
     }
 }
 
 impl Default for State {
     fn default() -> Self {
-        Self {
-            objective_value: f64::MAX,
-            vector: Vec::new(),
-        }
+        Self { objective_value: f64::MAX, vector: Vec::new() }
     }
 }

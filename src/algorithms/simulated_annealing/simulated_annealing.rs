@@ -14,15 +14,20 @@ use crate::algorithms::simulated_annealing::neighborhood_generation::{
 use crate::algorithms::simulated_annealing::options::SAOptions;
 use crate::core::problem::BBOBProblem;
 
+static NEIGHBORHOOD_SIZE: u64 = 100;
+
 pub fn run_sa(problem: &mut BBOBProblem, options: SAOptions) -> Result<Minimum> {
     let mut rng =
         UniformF64BoundedRandomGenerator::new(problem.bounds, options.seed);
 
-    let mut current_state = State::new_without_value(rng.sample_multiple(40));
+    let mut current_state = State {
+        vector: rng.sample_multiple(40),
+        ..Default::default()
+    };
     let mut minimal_state = current_state.clone();
     current_state.set_objective_value(problem.evaluate(&current_state.vector));
 
-    let neighborhood = &mut SANeighborhood::new();
+    let neighborhood = &mut SANeighborhood::new(problem.bounds, options.seed);
     let mut temperature = options.initial_temperature as f64;
     let mut iters = 0;
 
@@ -59,17 +64,14 @@ fn local_search(
     options: SAOptions,
 ) -> Result<Minimum> {
     let current_state = start_state.clone();
-    let mut minimal_state = current_state;
-
-    let neighborhood = &mut LocalSearchNeighborhood::new();
-
+    let mut minimal_state = current_state.clone();
+    let neighborhood =
+        &mut LocalSearchNeighborhood::new(problem.bounds, options.seed);
     let mut iters = 0;
     let mut step = options.initial_step_size_ls;
-
     let mut last_10_values = Vec::new();
     last_10_values.resize(10, 0f64);
-
-    let mut current_options = options;
+    let mut current_options = options.clone();
 
     while iters < options.max_iterations_ls && step >= 10e-16 {
         neighborhood.generate_neighborhood(
@@ -77,7 +79,6 @@ fn local_search(
             problem,
             current_options,
         );
-
         for el in neighborhood.states.iter() {
             let mut moved = el.clone();
             let objective_value = problem.evaluate(&el.vector);
@@ -91,16 +92,13 @@ fn local_search(
 
         last_10_values[(iters % 10) as usize] = minimal_state.objective_value;
 
-        if check_last_10_similar(&last_10_values) {
+        if check_last_10_similar(&last_10_values, step) {
             if step <= 1f64 {
                 step *= options.ls_step_decrease;
             } else {
                 step -= options.ls_step_decrease;
             }
-            current_options = SAOptions {
-                initial_step_size_ls: step,
-                ..current_options
-            };
+            current_options = SAOptions { initial_step_size_ls: step, ..current_options };
         }
 
         iters += 1;
@@ -112,14 +110,14 @@ fn local_search(
     })
 }
 
-fn check_last_10_similar(last_10: &Vec<f64>) -> bool {
+fn check_last_10_similar(last_10: &Vec<f64>, step: f64) -> bool {
     if last_10.len() < 10 {
         return false;
     }
     let fst = last_10[0];
 
     for el in last_10.iter() {
-        if abs(*el - fst) > 10e-3 {
+        if abs(*el - fst) >  10e-3 {
             return false;
         }
     }
